@@ -187,6 +187,8 @@ textarea:focus{border-color:var(--cy);outline:none;box-shadow:0 0 0 1px var(--cy
 .cvmain{border-top:0;padding-top:0;background:color-mix(in srgb,var(--cy) 6%,transparent);border:1px solid color-mix(in srgb,var(--cy) 35%,transparent);border-radius:10px;padding:12px 14px}
 .cvmain.flash{animation:cvf 1.2s ease 2}
 @keyframes cvf{50%{box-shadow:0 0 0 3px var(--cy)}}
+.cvc .btn.sm{padding:6px 10px;font-size:11px;vertical-align:middle}
+.cvmain ol .btn{vertical-align:middle}
 .cvadv summary{cursor:pointer;color:var(--dim);font:600 12px/1.4 var(--f-disp);letter-spacing:.12em;text-transform:uppercase}
 .lnk{background:none;border:0;padding:0;color:var(--cy);text-decoration:underline;font:inherit;cursor:pointer}
 .cvbtn{display:inline-block;padding:5px 12px;border-radius:999px;border:1px solid var(--cy);color:var(--cy);background:color-mix(in srgb,var(--cy) 12%,transparent);font:700 13px/1.4 var(--f-body);text-decoration:none;cursor:grab}
@@ -297,22 +299,29 @@ textarea:focus{border-color:var(--cy);outline:none;box-shadow:0 0 0 1px var(--cy
       <button type="button" class="x" id="cvX" aria-label="Close">&times;</button>
     </div>
     <div class="cvb cvmain" id="cvMain">
-      <span class="lbl">Sync from Canvas &middot; one-time setup, about 30 seconds</span>
+      <span class="lbl">Sync from Canvas &middot; works on any computer, no setup</span>
       <ol>
-        <li>Press <b>Ctrl+Shift+B</b> in Edge to show your favorites bar.</li>
-        <li>Drag this button onto the bar: <a class="cvbtn" id="cvBtn" href="#" draggable="true">&#8644; FPLN Sync</a>
-          <div class="note">Can't drag it (for example from the installed FPLN window)? <button type="button" class="lnk" id="cvCopy">Copy the button</button>, then in Edge press <b>Ctrl+Shift+O</b> &rsaquo; <b>&hellip;</b> &rsaquo; <b>Add favorite</b>, name it <b>FPLN Sync</b> and paste into URL.</div></li>
-        <li>Open Canvas and click <b>FPLN Sync</b> on your favorites bar. FPLN opens with your assignments added. Click it again any time to update.</li>
+        <li><button type="button" class="btn go" id="cvList">Open my Canvas list</button> <span class="note">(sign in to Canvas if it asks)</span></li>
+        <li>On the page that opens (a wall of text is normal), press <b>Ctrl+A</b> then <b>Ctrl+C</b>.</li>
+        <li>Come back here. FPLN adds your assignments by itself, or press <button type="button" class="btn ghost sm" id="cvPaste">Paste from Canvas</button></li>
       </ol>
-      <div class="row"><button type="button" class="btn go" id="cvOpen">Open Canvas</button><button type="button" class="btn ghost" id="cvPaste">Paste from Canvas</button><span class="note" id="cvLast"></span></div>
+      <span class="note" id="cvLast"></span>
+      <details class="cvadv"><summary>Faster after setup: FPLN Sync button</summary>
+        <ol style="margin-top:6px">
+          <li>Press <b>Ctrl+Shift+B</b> to show your favorites bar, then drag this onto it: <a class="cvbtn" id="cvBtn" href="#" draggable="true">&#8644; FPLN Sync</a>
+            <div class="note">Can't drag it? <button type="button" class="lnk" id="cvCopy">Copy the button</button>, then Ctrl+Shift+O &rsaquo; &hellip; &rsaquo; Add favorite, name it FPLN Sync, paste into URL.</div></li>
+          <li>On any Canvas page, click <b>FPLN Sync</b>.</li>
+        </ol>
+        <div class="row"><button type="button" class="btn ghost sm" id="cvOpen">Open Canvas</button></div>
+      </details>
     </div>
     <div class="cvf">
-      <label><span class="lbl">Canvas address</span><input type="text" id="cvHost" autocomplete="off" spellcheck="false" placeholder="westpoint.instructure.com (copy it from your Canvas tab)"></label>
+      <label><span class="lbl">Canvas address</span><input type="text" id="cvHost" autocomplete="off" spellcheck="false" placeholder="westpoint.instructure.com"></label>
       <p class="msg" id="cvMsg" role="status"></p>
       <details class="cvadv" id="cvAdv"><summary>Canvas access token (API key)</summary>
         <div class="cvf" style="margin-top:8px">
           <label><span class="lbl">Access token</span><input type="password" id="cvKey" autocomplete="off" spellcheck="false" placeholder="Paste your Canvas access token"></label>
-          <p class="note">From Canvas: Account &rsaquo; Settings &rsaquo; + New access token. Saved only on this device. Canvas only accepts tokens from apps with a server, and websites like FPLN are turned away, so FPLN Sync above is what brings your work in. Your token is kept here for when FPLN gets a relay.</p>
+          <p class="note">From Canvas: Account &rsaquo; Settings &rsaquo; + New access token. Saved only on this device. Canvas only accepts tokens from apps with their own server and turns websites like FPLN away, so use Sync from Canvas above. It uses your normal Canvas sign-in instead of the token.</p>
           <div class="row"><button type="button" class="btn" id="cvSave">Save</button><button type="button" class="btn ghost" id="cvSync">Test token</button><button type="button" class="btn ghost" id="cvDel" hidden>Remove token</button></div>
         </div>
       </details>
@@ -1094,7 +1103,7 @@ var DISP = (function(){
 DISP.apply();
 
 /* ================= Feedback: straight to the developer's Google Form, anonymous by default ================= */
-var FPLN_VERSION = "0.6.2 beta \u00b7 31 Oct 2026";
+var FPLN_VERSION = "0.6.3 beta \u00b7 1 Nov 2026";
 var FB = (function(){
   var FORM = "https://docs.google.com/forms/d/e/1FAIpQLSf2YdE91QlvrLtVRfqKF-KoC-do04QxvXyvM3vY6dF4BQavlw/";
   var F_MSG = "entry.1832434695", F_NAME = "entry.1191502103", QKEY = "fpln:fbq";
@@ -1449,6 +1458,22 @@ var CANVAS = (function(){
   function summary(r){ if(r.err) return r.err;
     var b = []; if(r.nNew) b.push(r.nNew+" new"); if(r.nUp) b.push(r.nUp+" updated"); if(r.nDone) b.push(r.nDone+" marked done");
     return b.length ? "Canvas: "+b.join(", ")+"." : "Canvas: already up to date ("+r.total+" items checked)."; }
+  var DEF_HOST = "westpoint.instructure.com";
+  function day(k){ var x = new Date(Date.now()+k*864e5); return x.getFullYear()+"-"+pad(x.getMonth()+1)+"-"+pad(x.getDate()); }
+  function listUrl(h){ return "https://"+h+"/api/v1/planner/items?per_page=100&start_date="+day(-7)+"&end_date="+day(90); }
+  /* raw Canvas planner JSON (copied from the list page) -> FPLN payload */
+  function fromPlanner(arr, base){
+    return {v:1, host:base, at:Date.now(), items:arr.filter(function(i){ return i && i.plannable && i.plannable_date && /assignment|quiz|discussion_topic|wiki_page|planner_note/.test(i.plannable_type); }).map(function(i){
+      var sb = i.submissions || {};
+      return {id:i.plannable_type+"-"+i.plannable_id, t:i.plannable.title||i.plannable.name||"Canvas item", due:i.plannable_date, c:i.context_name||"Canvas", type:i.plannable_type,
+        pts:i.plannable.points_possible||0, url:i.html_url ? (i.html_url.charAt(0)==="/" ? "https://"+base+i.html_url : i.html_url) : "",
+        done:!!(sb.submitted || sb.graded || (i.planner_override && i.planner_override.marked_complete))}; })}; }
+  function parseAny(t){ t = String(t||"").trim(); if(!t) return null;
+    if(/^FPLNCANVAS:/.test(t)) return decode(t.replace(/^FPLNCANVAS:/,""));
+    t = t.replace(/^while\(1\);/,"");
+    if(t.charAt(0)==="["){ try{ var arr = JSON.parse(t); if(Array.isArray(arr) && (!arr.length || arr[0].plannable_type)) return fromPlanner(arr, cfg().host || DEF_HOST); }catch(e){} return {bad:"cut"}; }
+    if(t.charAt(0)==="{"){ try{ var o = JSON.parse(t); if(o.items) return o; if(o.errors) return {bad:"signin"}; }catch(e){} }
+    return null; }
   function decode(s){ try{ return JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g,"+").replace(/_/g,"/"))))); }catch(e){ try{ return JSON.parse(s); }catch(e2){ return null; } } }
   /* the FPLN Sync button (a bookmark). It runs on Canvas, so Canvas allows it, and it needs no key. */
   function bookmarklet(){
@@ -1465,7 +1490,7 @@ var CANVAS = (function(){
   function ago(t){ var m = Math.round((Date.now()-t)/6e4); return m<1 ? "just now" : m<60 ? m+" min ago" : m<1440 ? Math.round(m/60)+" h ago" : Math.round(m/1440)+" d ago"; }
   function paint(){
     var c = cfg(), last = null; try{ last = JSON.parse(localStorage.getItem(LAST)); }catch(e){}
-    $("cvHost").value = c.host||""; $("cvKey").value = ""; $("cvKey").placeholder = c.token ? "Saved on this device \u00b7 \u2022\u2022\u2022\u2022"+String(c.token).slice(-4) : "Paste your Canvas access token";
+    $("cvHost").value = c.host||DEF_HOST; $("cvKey").value = ""; $("cvKey").placeholder = c.token ? "Saved on this device \u00b7 \u2022\u2022\u2022\u2022"+String(c.token).slice(-4) : "Paste your Canvas access token";
     $("cvDel").hidden = !c.token;
     $("cvLast").textContent = last ? "Last sync "+ago(last.at)+" \u00b7 "+last.n+(last.n===1 ? " item" : " items") : "Not synced yet";
     $("cvBtn").href = bookmarklet();
@@ -1481,7 +1506,7 @@ var CANVAS = (function(){
     cvPull("https://"+c.host, c.token).then(function(p){ msg(summary(apply(p))); paint(); }, function(e){
       if(/Failed to fetch|NetworkError|Load failed/i.test(e.message)) flash();
       msg(/Failed to fetch|NetworkError|Load failed/i.test(e.message) ?
-        "Your token is saved, but Canvas only accepts tokens from apps with their own server and turns websites like FPLN away. Use FPLN Sync above instead: it signs in with your Canvas login, so it needs no token." :
+        "Your token is saved, but Canvas only accepts tokens from apps with their own server and turns websites like FPLN away. Use Sync from Canvas above instead: it uses your Canvas sign-in, so it needs no token." :
         "Canvas didn't accept that: "+e.message+". Check the address and token.", true); });
   }
   $("cvX").onclick = close;
@@ -1493,14 +1518,29 @@ var CANVAS = (function(){
   $("cvSync").onclick = sync;
   $("cvBtn").addEventListener("click", function(e){ e.preventDefault(); msg("Drag this button onto your favorites bar (Ctrl+Shift+B shows it), then click it on any Canvas page.", true); });
   $("cvCopy").onclick = function(){ var t = bookmarklet(); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ msg("Copied. In Edge: Ctrl+Shift+O \u203a \u2026 \u203a Add favorite \u203a name it FPLN Sync \u203a paste into URL \u203a Save."); }, function(){ prompt("Copy this, then add it as a favorite named FPLN Sync:", t); }); };
-  $("cvOpen").onclick = function(){ var c = cfg(), h = host($("cvHost").value) || c.host;
+  $("cvOpen").onclick = function(){ var c = cfg(), h = host($("cvHost").value) || c.host || DEF_HOST;
     if(!h){ msg("Type your Canvas address below first (copy it from your Canvas tab).", true); $("cvHost").focus(); return; }
     if(h!==c.host){ c.host = h; setCfg(c); } window.open("https://"+h, "_blank", "noopener"); };
   $("cvHost").addEventListener("change", function(){ var c = cfg(), h = host($("cvHost").value); if(h){ c.host = h; setCfg(c); msg("Canvas address saved."); } });
+  function useText(t, quiet){ var p = parseAny(t);
+    if(p && p.bad==="signin"){ msg("Canvas says you're not signed in. Sign in to Canvas in that tab, reload it, then copy again.", true); return false; }
+    if(p && p.bad==="cut"){ msg("Only part of the page was copied. On the Canvas page press Ctrl+A first, then Ctrl+C.", true); return false; }
+    if(!p || !p.items){ if(!quiet) msg("That isn't your Canvas list yet. Open my Canvas list, press Ctrl+A then Ctrl+C there, and come back.", true); return false; }
+    var c = cfg(); if(!c.host && p.host){ c.host = p.host; setCfg(c); }
+    pending = 0; msg(summary(apply(p))); paint(); return true; }
+  function pasteBox(){ var t = prompt("Press Ctrl+V to paste what you copied from Canvas, then OK:"); if(t) useText(t); }
   $("cvPaste").onclick = function(){
-    var go = function(t){ var s = String(t||"").trim().replace(/^FPLNCANVAS:/,""), p = decode(s); if(!p || !p.items){ msg("Nothing from Canvas on the clipboard yet. Click FPLN Sync on a Canvas page first.", true); return; } msg(summary(apply(p))); paint(); };
-    if(navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(go, function(){ var t = prompt("Paste what FPLN Sync copied:"); if(t) go(t); });
-    else { var t = prompt("Paste what FPLN Sync copied:"); if(t) go(t); } };
+    if(navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function(t){ if(!useText(t, true)) { if(!parseAny(t)) pasteBox(); } }, pasteBox);
+    else pasteBox(); };
+  var pending = 0;
+  $("cvList").onclick = function(){ var c = cfg(), h = host($("cvHost").value) || c.host || DEF_HOST;
+    if(h!==c.host){ c.host = h; setCfg(c); $("cvHost").value = h; }
+    pending = Date.now(); window.open(listUrl(h), "_blank", "noopener");
+    msg("On the Canvas page: Ctrl+A, then Ctrl+C. Then come back here."); };
+  /* back from the Canvas tab with the list copied: read the clipboard and add it */
+  window.addEventListener("focus", function(){ if(!pending || Date.now()-pending > 15*60e3 || $("cv").hidden) return;
+    if(!(navigator.clipboard && navigator.clipboard.readText)) return;
+    setTimeout(function(){ navigator.clipboard.readText().then(function(t){ useText(t, true); }, function(){}); }, 250); });
   /* arriving from the FPLN Sync button: #canvas=... */
   function fromHash(){ var m = location.hash.match(/^#canvas=(.+)$/); if(!m) return;
     var p = decode(m[1]); try{ history.replaceState(null, "", location.pathname+location.search); }catch(e){}
