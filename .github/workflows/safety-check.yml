@@ -1,0 +1,20 @@
+name: Safety check
+# Scans the public FPLN site for secrets, personal information, CUI and new data destinations.
+# Runs on every push, every Monday, and by hand (Actions > Safety check > Run workflow).
+# If it fails, GitHub emails the repo owner.
+on:
+  push:
+  schedule:
+    - cron: "17 11 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan site and history
+        run: python3 .github/safety/guard.py --root . --history
