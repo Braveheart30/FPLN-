@@ -1,0 +1,40 @@
+name: FPLN adversary tier
+# Test tier 6: 12 hard attacks modelled on how real attackers go after a browser app's personal data
+# (borrowed-key theft through allowed AI services, prompt injection, stored script injection, poisoned links,
+# clickjacking, same-domain neighbors, poisoned libraries, tabnabbing, prototype pollution, feedback leaks,
+# forensic recovery, cross-window messages). Private copy only; a data-loss detector watches every request.
+# Runs on every push to main, every Monday, and by hand. Fails on any BREACHED.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "7 12 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  adversary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install browser
+        run: |
+          pip install playwright==1.48.0
+          python -m playwright install --with-deps chromium
+      - name: Run the adversary tier
+        run: python .github/safety/adversary.py --root . --out adversary.json
+      - name: Summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          try: r = json.load(open("adversary.json"))
+          except Exception: print("### FPLN adversary tier: did not finish"); raise SystemExit
+          print("### FPLN adversary tier: " + ", ".join("%d %s" % (v, k) for k, v in sorted(r["summary"].items())))
+          print("| ID | Attack | Verdict | Findings |\n|---|---|---|---|")
+          for a in r["attacks"]: print("| %s | %s | **%s** | %s |" % (a["id"], a["name"], a["verdict"], " · ".join(a["findings"]) or "—"))
+          PY
