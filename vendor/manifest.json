@@ -16,6 +16,30 @@
       "sha256": "cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41",
       "bytes": 951904,
       "source": "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"
+    },
+    "pdfjs-3.11.174.min.js": {
+      "name": "pdfjs-dist",
+      "ecosystem": "npm",
+      "version": "3.11.174",
+      "sha256": "5b5799e6f8c680663207ac5b42ee14eed2a406fa7af48f50c154f0c0b1566946",
+      "bytes": 320004,
+      "source": "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"
+    },
+    "pdfjs-3.11.174.worker.min.js": {
+      "name": "pdfjs-dist",
+      "ecosystem": "npm",
+      "version": "3.11.174",
+      "sha256": "feabdf309770ed24bba31a5467836cdc8cf639c705af27d52b585b041bb8527b",
+      "bytes": 1087212,
+      "source": "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"
+    },
+    "web-llm-0.2.84.esm.js": {
+      "name": "@mlc-ai/web-llm",
+      "ecosystem": "npm",
+      "version": "0.2.84",
+      "sha256": "d1ecb2579991ee53fa4f00e2f1b76841419d7b2d48f64c7cdf23968a72f2eba5",
+      "bytes": 6065527,
+      "source": "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.84/+esm"
     }
   }
 }
