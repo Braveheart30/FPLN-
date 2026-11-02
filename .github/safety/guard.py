@@ -55,7 +55,7 @@ ALLOW_PHONES = {"315-774-8200","315-774-8300","845-446-4731","845-446-5446","845
 ALLOW_EMAIL = re.compile(r"@(?:users\.noreply\.github\.com)$|^noreply@anthropic\.com$")
 # Where the app may connect. DATA = can carry what a cadet types (only with their own key/consent).
 HOSTS_DATA = {"api.anthropic.com","generativelanguage.googleapis.com","docs.google.com","api.open-meteo.com"}
-HOSTS_LIBS = {"fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net","cdnjs.cloudflare.com","unpkg.com","esm.run","huggingface.co","raw.githubusercontent.com"}
+HOSTS_LIBS = {"cdn.sheetjs.com","fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net","cdnjs.cloudflare.com","unpkg.com","esm.run","huggingface.co","raw.githubusercontent.com"}
 HOSTS_LINKS = {"aistudio.google.com","corp.commissaries.com","history.army.mil","keller.tricare.mil","tools.usps.com","usma.libcal.com","wanderlog.com",
                "westpoint.edu","www.westpoint.edu","www.google.com","www.ikehall.com","www.openstreetmap.org","www.opentable.com","www.shopmyexchange.com",
                "braveheart30.github.io","github.com","westpoint.instructure.com","www.w3.org","console.anthropic.com","schema.org"}
@@ -124,7 +124,8 @@ def scan_file(path, rel):
     if ext in {".png",".ico"}: return
     try: text = open(path, encoding="utf-8", errors="replace").read()
     except Exception: return
-    scan_text(rel, text, secrets_only=os.path.abspath(path) == SELF or rel.endswith("guard.py"))
+    vendored = rel.replace(os.sep, "/").startswith("vendor/") and ext == ".js"
+    scan_text(rel, text, secrets_only=os.path.abspath(path) == SELF or rel.endswith("guard.py") or vendored)
 
 n = 0
 for dp, dns, fns in os.walk(ROOT):
@@ -142,6 +143,13 @@ if A.history and os.path.isdir(os.path.join(ROOT, ".git")):
         for i in range(before, len(findings)): findings[i] = (findings[i][0] + " (in an old commit)",) + findings[i][1:]
     except Exception as e:
         add("CHECK: could not read history", ROOT, str(e))
+
+# self-hosted libraries must match the hashes they were pinned with
+vp = os.path.join(ROOT, ".github", "safety", "vendor.py")
+if os.path.isdir(os.path.join(ROOT, "vendor")) and os.path.exists(vp):
+    vr = subprocess.run([sys.executable, vp, "--root", ROOT, "--verify"], capture_output=True, text=True)
+    if vr.returncode != 0:
+        for ln in vr.stdout.strip().splitlines(): add("FILE: self-hosted library doesn't match its pinned hash", "vendor", ln)
 
 print("FPLN safety check: %d files scanned%s." % (n, ", history included" if A.history else ""))
 if not findings:
