@@ -1,7 +1,7 @@
 /* FPLN service worker: newest version on every launch, works offline after the first visit.
    Safety layer 6: reads control.json on its own and, while FPLN is paused or shut down, refuses
    every request to another site at the network layer, even if the page's own code fails. */
-const CACHE = 'fpln-202611012300';
+const CACHE = 'fpln-202611020100';
 const CTL = 'fpln-ctl';
 const CORE = ['./', './index.html', './manifest.webmanifest', './favicon.ico', './icons/icon-32.png', './icons/icon-64.png', './icons/icon-192.png', './icons/icon-512.png'];
 const FEAT = {
@@ -12,8 +12,8 @@ const FEAT = {
   fonts: { h: ['fonts.googleapis.com', 'fonts.gstatic.com'] },
   libs: { h: ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'unpkg.com', 'esm.run'] }
 };
-let SAFE = null, lastCheck = 0;           // {state, id, off:[]}
-const ready = caches.open(CTL).then(c => c.match('state')).then(r => r ? r.json() : null).then(s => { SAFE = s || { state: 'none', off: [] }; }).catch(() => { SAFE = { state: 'none', off: [] }; });
+let SAFE = null, lastCheck = 0, RING = '';           // {state, id, off:[]}; RING = this device's group, if any
+const ready = caches.open(CTL).then(c => Promise.all([c.match('state'), c.match('ring')])).then(([r, g]) => Promise.all([r ? r.json() : null, g ? g.text() : ''])).then(([s, g]) => { SAFE = s || { state: 'none', off: [] }; RING = g || ''; }).catch(() => { SAFE = { state: 'none', off: [] }; });
 
 function save(s) { SAFE = s; return caches.open(CTL).then(c => c.put('state', new Response(JSON.stringify(s), { headers: { 'content-type': 'application/json' } }))); }
 function refresh(force) {
@@ -21,8 +21,11 @@ function refresh(force) {
   lastCheck = Date.now();
   return fetch('./control.json?sw=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
     if (!j) return;
-    const k = j.kill && ['freeze', 'erase'].includes(j.kill.state) ? j.kill : { state: 'none' };
-    const off = Array.isArray(j.off) ? j.off.filter(x => FEAT[x]) : [];
+    const grp = (RING && j.rings && j.rings[RING]) || null;
+    const rank = x => x && x.kill ? ({ freeze: 1, erase: 2 }[x.kill.state] || 0) : 0;
+    const src = rank(grp) > rank(j) ? grp : j;
+    const k = src.kill && ['freeze', 'erase'].includes(src.kill.state) ? src.kill : { state: 'none' };
+    const off = [...new Set([...(Array.isArray(j.off) ? j.off : []), ...(grp && Array.isArray(grp.off) ? grp.off : [])])].filter(x => FEAT[x]);
     const was = SAFE ? SAFE.state : 'none';
     const s = { state: k.state, id: k.id || '', off, at: Date.now() };
     const p = save(s);
@@ -73,4 +76,10 @@ self.addEventListener('fetch', e => {
   if (req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('index.html')) { e.waitUntil(ready.then(() => refresh(false))); e.respondWith(fresh(req)); return; }
   e.respondWith(caches.match(req).then(r => r || fetch(req).then(res => { if (res.ok && !(SAFE && SAFE.state === 'erase')) { const c = res.clone(); caches.open(CACHE).then(x => x.put(req, c)); } return res; })));
 });
-self.addEventListener('message', e => { if (e.data === 'fpln-safety-check') e.waitUntil(refresh(true)); });
+self.addEventListener('message', e => {
+  const d = e.data;
+  if (d && d.t === 'fpln-ring' && typeof d.h === 'string' && /^[0-9a-f]{0,24}$/.test(d.h) && d.h !== RING) {
+    RING = d.h; e.waitUntil(caches.open(CTL).then(c => c.put('ring', new Response(RING))).then(() => refresh(true)));
+  }
+  if (d === 'fpln-safety-check') e.waitUntil(refresh(true));
+});

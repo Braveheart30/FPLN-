@@ -8,7 +8,7 @@
    6  service worker sw.js reads control.json on its own and refuses outside traffic at the network layer
    A signal locks FPLN if ANY copy says so; FPLN unlocks only when every copy it can reach says "none". */
 (function(){
-  var W = window, LK = "fpln:lock", CK = "fpln:ctl";
+  var W = window, LK = "fpln:lock", CK = "fpln:ctl", RK = "fpln:ring";
   var BASE = (location.hostname === "braveheart30.github.io" && location.pathname.indexOf("/FPLN-/") === 0) ? "" : "https://braveheart30.github.io/FPLN-/";
   var FEAT = {
     eric:     {n:"Eric (AI)", h:["generativelanguage.googleapis.com","api.anthropic.com","huggingface.co","raw.githubusercontent.com"], p:["/@mlc-ai/"]},
@@ -23,6 +23,14 @@
   function rawSet(k, v){ try{ Storage.prototype.setItem.call(localStorage, k, v); }catch(e){} }
   function rawDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
   function pj(t){ try{ return JSON.parse(t); }catch(e){ return null; } }
+  var ring = g(RK) || "";
+  function enroll(){ var m = location.hash.match(/^#ring=([A-Za-z0-9_-]{16,80})$/); if(!m) return;
+    try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
+    if(m[1] === "leave-ring-now"){ rawDel(RK); ring = ""; return; }
+    try{ crypto.subtle.digest("SHA-256", new TextEncoder().encode(m[1])).then(function(b){
+      ring = Array.prototype.map.call(new Uint8Array(b), function(x){ return ("0"+x.toString(16)).slice(-2); }).join("").slice(0, 24);
+      rawSet(RK, ring); swPing(); check(true); }); }catch(e){} }
+  enroll(); W.addEventListener("hashchange", enroll);
   var lock = pj(g(LK)), ctl = pj(g(CK)) || {}, last = 0, lastOk = 0;
   var locked = !!(lock && (lock.state === "freeze" || lock.state === "erase"));
   W.FPLN_LOCKED = locked;
@@ -86,7 +94,7 @@
 
   /* erase: every FPLN key, the offline copy and the on-phone AI model. Only FPLN's own items: other sites are untouched. */
   function wipe(){
-    var ks = []; try{ for(var i=0;i<localStorage.length;i++){ var k = localStorage.key(i); if(/^fpln/.test(k) && k !== LK) ks.push(k); } }catch(e){}
+    var ks = []; try{ for(var i=0;i<localStorage.length;i++){ var k = localStorage.key(i); if(/^fpln/.test(k) && k !== LK && k !== RK) ks.push(k); } }catch(e){}
     ks.forEach(rawDel);
     try{ var ss = []; for(var j=0;j<sessionStorage.length;j++){ var k2 = sessionStorage.key(j); if(/^fpln/.test(k2)) ss.push(k2); } ss.forEach(function(k){ sessionStorage.removeItem(k); }); }catch(e){}
     var jobs = [];
@@ -107,17 +115,20 @@
       var c = r[0], v = r[1];
       if(!c && !v) return;                                  // offline or site down: the latch decides
       lastOk = Date.now();
-      var sigs = [c ? kill(c) : null, v ? kill(v) : null].filter(Boolean);
+      var r2 = (ring && c && c.rings && c.rings[ring]) || null;      // orders addressed to this device's group
+      var sigs = [c ? kill(c) : null, v ? kill(v) : null, r2 ? kill(r2) : null].filter(Boolean);
       var top = sigs.reduce(function(a, b){ return RANK[b.state] > RANK[a.state] ? b : a; }, {state:"none"});
       if(top.state !== "none"){ apply(top); return; }
       if(locked && c){ rawDel(LK); reload(); return; }   // every copy says none: unlock
-      if(c){ var nc = {off: Array.isArray(c.off) ? c.off.filter(function(k){ return FEAT[k]; }) : [], banner: c.banner && c.banner.text ? c.banner : null, rev: c.rev || "", at: Date.now()};
+      if(c){ var offs = (Array.isArray(c.off) ? c.off : []).concat(r2 && Array.isArray(r2.off) ? r2.off : []).filter(function(k, i, a){ return FEAT[k] && a.indexOf(k) === i; }).sort();
+        var bn = r2 && r2.banner && r2.banner.text ? r2.banner : (c.banner && c.banner.text ? c.banner : null);
+        var nc = {off: offs, banner: bn, rev: c.rev || "", at: Date.now()};
         var changed = JSON.stringify(nc.off) !== JSON.stringify(ctl.off || []);
         ctl = nc; rawSet(CK, JSON.stringify(nc)); banner(); if(changed) reload(); }
       status();
     });
   }
-  function swPing(){ try{ var c = navigator.serviceWorker && navigator.serviceWorker.controller; if(c) c.postMessage("fpln-safety-check"); }catch(e){} }
+  function swPing(){ try{ var c = navigator.serviceWorker && navigator.serviceWorker.controller; if(c){ c.postMessage({t:"fpln-ring", h:ring}); c.postMessage("fpln-safety-check"); } }catch(e){} }
   function reload(){ swPing(); setTimeout(function(){ location.reload(); }, 900); }
   function apply(k){
     if(lock && lock.state === k.state && lock.id === k.id) return;
@@ -168,7 +179,7 @@
   function start(){
     if(locked && lock.state === "erase") wipe();   // catch anything saved while FPLN was closing
     if(locked) overlay(); else banner();
-    check(true);
+    check(true); swPing();
     setInterval(function(){ check(true); swPing(); }, 3e5);
     document.addEventListener("visibilitychange", function(){ if(!document.hidden) check(false); });
     W.addEventListener("online", function(){ check(true); });
@@ -1332,7 +1343,7 @@ var DISP = (function(){
 DISP.apply();
 
 /* ================= Feedback: straight to the developer's Google Form, anonymous by default ================= */
-var FPLN_VERSION = "0.7.1 beta \u00b7 1 Nov 2026";
+var FPLN_VERSION = "0.7.2 beta \u00b7 1 Nov 2026";
 var FB = (function(){
   var FORM = "https://docs.google.com/forms/d/e/1FAIpQLSf2YdE91QlvrLtVRfqKF-KoC-do04QxvXyvM3vY6dF4BQavlw/";
   var F_MSG = "entry.1832434695", F_NAME = "entry.1191502103", QKEY = "fpln:fbq";

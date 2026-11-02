@@ -1,0 +1,38 @@
+name: FPLN built-in test
+# Runs the real app in a real browser and checks every safety layer: pause, offline latch, restore,
+# feature switches, banner, test groups, erase and the shutdown site. The app isn't told it's a test.
+# Runs on every push, every Monday, and by hand (Actions > FPLN built-in test > Run workflow).
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "41 11 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install browser
+        run: |
+          pip install playwright==1.48.0
+          python -m playwright install --with-deps chromium
+      - name: Run built-in test
+        run: python .github/safety/selftest.py --root . --out bit.json
+      - name: Summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          try: r = json.load(open("bit.json"))
+          except Exception: print("### FPLN built-in test: did not finish"); raise SystemExit
+          print("### FPLN built-in test: %s (%d/%d)" % (r["result"], r["passed"], r["total"]))
+          print("| Group | Check | Result |\n|---|---|---|")
+          for c in r["checks"]: print("| %s | %s | %s |" % (c["group"], c["name"], "PASS" if c["pass"] else "**FAIL** " + c["detail"]))
+          PY

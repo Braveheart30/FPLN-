@@ -24,6 +24,10 @@ on:
         description: "switches only: features to turn off, comma separated, or none"
         required: false
         default: ""
+      group:
+        description: "Test group code (24 characters) to send this only to that group's devices; leave blank for everyone"
+        required: false
+        default: ""
       confirm:
         description: "Type ERASE for erase, SHUTDOWN for shutdown-site"
         required: false
@@ -41,6 +45,7 @@ jobs:
       MSG: ${{ inputs.message }}
       OFF: ${{ inputs.off }}
       CONFIRM: ${{ inputs.confirm }}
+      GROUP: ${{ inputs.group }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,16 +53,18 @@ jobs:
           fetch-depth: 0
       - name: Check confirmation
         run: |
-          if [ "$ACTION" = "erase" ] && [ "$CONFIRM" != "ERASE" ]; then echo "::error::Type ERASE in confirm to erase."; exit 1; fi
+          if [ -n "$GROUP" ] && { [ "$ACTION" = "shutdown-site" ] || [ "$ACTION" = "bring-back" ]; }; then echo "::error::shutdown-site and bring-back can't target a test group."; exit 1; fi
+          if [ "$ACTION" = "erase" ] && [ -z "$GROUP" ] && [ "$CONFIRM" != "ERASE" ]; then echo "::error::Type ERASE in confirm to erase."; exit 1; fi
           if [ "$ACTION" = "shutdown-site" ] && [ "$CONFIRM" != "SHUTDOWN" ]; then echo "::error::Type SHUTDOWN in confirm to replace the site."; exit 1; fi
       - name: Write the signal
         run: |
+          R=""; if [ -n "$GROUP" ]; then R="--ring $GROUP"; fi
           case "$ACTION" in
-            freeze|erase) python3 .github/safety/control.py "$ACTION" --msg "$MSG" --by workflow ;;
-            restore|bring-back) python3 .github/safety/control.py restore --by workflow ;;
-            switches) python3 .github/safety/control.py switches --off "$OFF" --by workflow ;;
-            banner) python3 .github/safety/control.py banner --msg "$MSG" --by workflow ;;
-            clear-banner) python3 .github/safety/control.py clear-banner --by workflow ;;
+            freeze|erase) python3 .github/safety/control.py "$ACTION" --msg "$MSG" --by workflow $R ;;
+            restore|bring-back) python3 .github/safety/control.py restore --by workflow $R ;;
+            switches) python3 .github/safety/control.py switches --off "$OFF" --by workflow $R ;;
+            banner) python3 .github/safety/control.py banner --msg "$MSG" --by workflow $R ;;
+            clear-banner) python3 .github/safety/control.py clear-banner --by workflow $R ;;
             shutdown-site) python3 .github/safety/control.py erase --msg "$MSG" --by workflow ;;
           esac
           python3 .github/safety/control.py status

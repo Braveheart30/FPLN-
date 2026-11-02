@@ -1,1 +1,1 @@
-{"version": "0.7.1 beta \u00b7 1 Nov 2026", "note": "Safety update: remote safety switch", "built": "202611012300", "kill": {"state": "none"}}
+{"version": "0.7.2 beta \u00b7 1 Nov 2026", "note": "Safety update: test groups", "built": "202611020100", "kill": {"state": "none", "id": "R-20261102-023020", "msg": ""}}

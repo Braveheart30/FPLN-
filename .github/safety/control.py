@@ -13,7 +13,13 @@ Usage (run from the repo root):
   control.py banner   --msg TEXT [--level info|warn]
   control.py clear-banner
   control.py status                    print the current signal
+
+Add --ring HASH to any of these to address only the devices in one test group (the 24-character
+group code from the Command Center). Group orders live in control.json under "rings"; the app obeys
+them exactly as it obeys everyone-orders, so it can't tell a drill from the real thing.
+restore --ring HASH removes that group's orders.
 """
+import re
 import argparse, json, os, sys, datetime
 
 FEATURES = ["eric", "feedback", "weather", "canvas", "fonts", "libs", "links"]
@@ -24,6 +30,7 @@ ap.add_argument("--off", default="")
 ap.add_argument("--level", default="info", choices=["info", "warn"])
 ap.add_argument("--root", default=".")
 ap.add_argument("--by", default="manual")
+ap.add_argument("--ring", default="")
 A = ap.parse_args()
 
 C = os.path.join(A.root, "control.json")
@@ -47,6 +54,36 @@ if ver is None:
 
 if A.action == "status":
     print(json.dumps({"control": ctl, "version_kill": ver.get("kill")}, indent=2)); sys.exit(0)
+
+RING = A.ring.strip().lower()
+if RING and not re.fullmatch(r"[0-9a-f]{24}", RING):
+    sys.exit("--ring must be the 24-character group code")
+if RING and A.action != "status":
+    rings = ctl.get("rings") if isinstance(ctl.get("rings"), dict) else {}
+    g = rings.get(RING) or {"kill": {"state": "none", "id": "", "msg": ""}, "off": [], "banner": None}
+    if A.action in ("freeze", "erase"): g["kill"] = {"state": A.action, "id": "K-" + stamp, "msg": clean(A.msg)}
+    elif A.action == "restore": g = None
+    elif A.action == "switches":
+        raw = [x.strip().lower() for x in A.off.split(",") if x.strip()]
+        if raw == ["none"]: raw = []
+        bad = [x for x in raw if x not in FEATURES]
+        if bad: sys.exit("Unknown feature(s): " + ", ".join(bad))
+        g["off"] = sorted(set(raw))
+    elif A.action == "banner":
+        if not A.msg.strip(): sys.exit("--msg is required for a banner")
+        g["banner"] = {"id": "B-" + stamp, "text": clean(A.msg, 300), "level": A.level}
+    elif A.action == "clear-banner": g["banner"] = None
+    if g is None or (g["kill"]["state"] == "none" and not g["off"] and not g.get("banner")): rings.pop(RING, None)
+    else: rings[RING] = g
+    ctl["rings"] = rings
+    ctl["rev"] = "group-" + A.action + "-" + stamp
+    ctl["updated"] = now.isoformat(timespec="seconds")
+    ctl["by"] = clean(A.by, 40)
+    tmp = C + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f: json.dump(ctl, f, indent=2, ensure_ascii=False)
+    json.load(open(tmp, encoding="utf-8")); os.replace(tmp, C)
+    print("FPLN group %s: %s" % (RING[:6], json.dumps(rings.get(RING)) if RING in rings else "no orders"))
+    sys.exit(0)
 
 if A.action in ("freeze", "erase"):
     ctl["kill"] = {"state": A.action, "id": "K-" + stamp, "msg": clean(A.msg)}
