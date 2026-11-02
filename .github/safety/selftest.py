@@ -23,6 +23,7 @@ for f in ["index.html", "sw.js", "version.json", "control.json", "manifest.webma
     shutil.copy(os.path.join(REPO, f), SITE)
 shutil.copytree(os.path.join(REPO, "icons"), os.path.join(SITE, "icons"))
 if os.path.isdir(os.path.join(REPO, "vendor")): shutil.copytree(os.path.join(REPO, "vendor"), os.path.join(SITE, "vendor"))
+if os.path.isdir(os.path.join(REPO, "range")): shutil.copytree(os.path.join(REPO, "range"), os.path.join(SITE, "range"))
 # start from a clean signal, whatever the live one says
 subprocess.run([sys.executable, CTL, "restore", "--root", SITE], capture_output=True)
 subprocess.run([sys.executable, CTL, "switches", "--off", "none", "--root", SITE], capture_output=True)
@@ -166,6 +167,23 @@ with sync_playwright() as p:
     check(G, "Worker removed", p2.evaluate("navigator.serviceWorker.getRegistrations().then(r=>r.length)") == 0)
     for f, d in saved.items(): open(os.path.join(SITE, f), "wb").write(d)
     sig("restore"); ctx2.close()
+
+    G = "Test range"
+    if os.path.isdir(os.path.join(SITE, "range")):
+        ctx3 = b.new_context(); route(ctx3); p3 = ctx3.new_page()
+        p3.goto(URL); time.sleep(4); p3.reload(); time.sleep(3)
+        p3.evaluate("localStorage.setItem('fpln:clock', JSON.stringify({v:3,tasks:[{id:'mine',t:'OWNER REAL TASK'}]}))")
+        p3.goto(URL + "range/?autorun=1&fast=1"); t1 = time.time(); txt = ""
+        while time.time() - t1 < 240:
+            time.sleep(2); txt = p3.inner_text("#now")
+            if txt.startswith(("DONE", "STOPPED", "CAN'T")): break
+        fails = p3.evaluate("Array.from(document.querySelectorAll('#rows div')).filter(d=>/FAIL/.test(d.lastChild.textContent)).map(d=>d.firstChild.textContent)")
+        npass = p3.evaluate("Array.from(document.querySelectorAll('#rows div')).filter(d=>/PASS/.test(d.lastChild.textContent)).length")
+        check(G, "Test range runs every scenario", txt.startswith("DONE") and npass >= 40, "%d passed" % npass)
+        check(G, "Every live test passes", txt.startswith("DONE") and not fails, "; ".join(fails)[:110])
+        p3.goto(URL); time.sleep(2)
+        check(G, "Range never touches the owner's real data", "OWNER REAL TASK" in (p3.evaluate("localStorage.getItem('fpln:clock')") or "") and not p3.evaluate("!!document.getElementById('fplnLocked')"))
+        ctx3.close()
 
     check("Normal", "No script errors from the guard", not [e for e in errs if "fpln" in e.lower()], errs[:2])
     b.close()

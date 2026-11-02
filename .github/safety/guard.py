@@ -103,7 +103,7 @@ def scan_text(where, text, secrets_only=False):
         h = h.lower().rstrip(".")
         if h in ALLOWED_HOSTS or h.endswith(".instructure.com") or h.endswith(".github.io"): continue
         if h in HOSTS_CI and where.replace(os.sep, "/").startswith(".github/"): continue
-        if h in ("localhost",) or h.endswith(".test") or h.endswith(".example") or h == "example.com": continue
+        if h in ("localhost",) or h.endswith(".test") or h.endswith(".example") or h.endswith(".invalid") or h == "example.com": continue
         add("NEW ADDRESS (could send data somewhere new)", where, h)
     low = text.lower()
     for p in private:
