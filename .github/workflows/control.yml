@@ -1,0 +1,87 @@
+name: FPLN control
+# The owner's remote control for every copy of FPLN. Run it from github.com or the GitHub mobile app:
+# Actions > FPLN control > Run workflow. It changes the safety signal on the live site within about a minute.
+#   freeze         pause FPLN: nothing leaves any device, data kept, reminders off
+#   erase          shut down and erase FPLN's data on every device that checks in (type ERASE in confirm)
+#   restore        end a freeze or erase
+#   switches       turn off features (comma list in "off"): eric, feedback, weather, canvas, fonts, libs, links; "none" = all on
+#   banner         show a message at the top of FPLN for everyone; clear-banner removes it
+#   shutdown-site  replace the live site with the shutdown page; also erases old FPLN versions (type SHUTDOWN in confirm)
+#   bring-back     put the full app back on the live site and restore it
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "What to do"
+        required: true
+        type: choice
+        options: [freeze, erase, restore, switches, banner, clear-banner, shutdown-site, bring-back]
+      message:
+        description: "Message cadets see (freeze, erase, banner)"
+        required: false
+        default: ""
+      off:
+        description: "switches only: features to turn off, comma separated, or none"
+        required: false
+        default: ""
+      confirm:
+        description: "Type ERASE for erase, SHUTDOWN for shutdown-site"
+        required: false
+        default: ""
+permissions:
+  contents: write
+concurrency:
+  group: fpln-control
+  cancel-in-progress: false
+jobs:
+  signal:
+    runs-on: ubuntu-latest
+    env:
+      ACTION: ${{ inputs.action }}
+      MSG: ${{ inputs.message }}
+      OFF: ${{ inputs.off }}
+      CONFIRM: ${{ inputs.confirm }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Check confirmation
+        run: |
+          if [ "$ACTION" = "erase" ] && [ "$CONFIRM" != "ERASE" ]; then echo "::error::Type ERASE in confirm to erase."; exit 1; fi
+          if [ "$ACTION" = "shutdown-site" ] && [ "$CONFIRM" != "SHUTDOWN" ]; then echo "::error::Type SHUTDOWN in confirm to replace the site."; exit 1; fi
+      - name: Write the signal
+        run: |
+          case "$ACTION" in
+            freeze|erase) python3 .github/safety/control.py "$ACTION" --msg "$MSG" --by workflow ;;
+            restore|bring-back) python3 .github/safety/control.py restore --by workflow ;;
+            switches) python3 .github/safety/control.py switches --off "$OFF" --by workflow ;;
+            banner) python3 .github/safety/control.py banner --msg "$MSG" --by workflow ;;
+            clear-banner) python3 .github/safety/control.py clear-banner --by workflow ;;
+            shutdown-site) python3 .github/safety/control.py erase --msg "$MSG" --by workflow ;;
+          esac
+          python3 .github/safety/control.py status
+      - name: Publish to main and the live site
+        run: |
+          git config user.name "FPLN control"
+          git config user.email "fpln-control@users.noreply.github.com"
+          git add control.json version.json
+          git commit -m "FPLN control: $ACTION" || echo "Signal unchanged"
+          git push origin HEAD:main
+          if [ "$ACTION" = "shutdown-site" ]; then
+            rm -rf /tmp/site && mkdir -p /tmp/site
+            cp .github/safety/tombstone/index.html .github/safety/tombstone/sw.js control.json version.json /tmp/site/
+            cp -r icons /tmp/site/ && touch /tmp/site/.nojekyll
+            cd /tmp/site && git init -q -b gh-pages && git add -A
+            git -c user.name="FPLN control" -c user.email="fpln-control@users.noreply.github.com" commit -qm "FPLN shut down"
+            git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages
+          else
+            git push -f origin HEAD:gh-pages
+          fi
+      - name: Summary
+        run: |
+          {
+            echo "### FPLN control: $ACTION"
+            echo "Done $(date -u '+%d %b %Y %H:%M UTC'). Devices pick it up the next time FPLN opens or within 5 minutes while open."
+            echo '```json'; cat control.json; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,13 @@
+{
+  "v": 1,
+  "rev": "init-202611012300",
+  "kill": {
+    "state": "none",
+    "id": "",
+    "msg": ""
+  },
+  "off": [],
+  "banner": null,
+  "updated": "2026-11-01T23:00:00-05:00",
+  "by": "command-center"
+}

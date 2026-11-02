@@ -1,0 +1,24 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'none'">
+<title>FPLN</title><meta name="theme-color" content="#070a0f">
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#070a0f;color:#e8f2f8;font:15px/1.5 system-ui,sans-serif;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+main{max-width:440px;display:grid;gap:12px}h1{margin:0;font:700 24px/1.2 system-ui,sans-serif}p{margin:0;color:#a9bccb}small{color:#7d92a3}</style></head>
+<body><main><h1>FPLN has been shut down</h1>
+<p>The FPLN team shut FPLN down as a safety step. FPLN's data has been removed from this device. Nothing else on this device was touched.</p>
+<p id="msg"></p><small id="st">Removing FPLN's data…</small></main>
+<script>
+/* Safety layer 7 (shutdown site): this page replaces FPLN on the official site. Any copy of FPLN that opens it,
+   old versions included, erases FPLN's own storage, offline copy and service worker. Other sites are untouched. */
+(function(){
+  var jobs = [];
+  try{ var ks = []; for(var i=0;i<localStorage.length;i++){ var k = localStorage.key(i); if(/^fpln/.test(k)) ks.push(k); } ks.forEach(function(k){ localStorage.removeItem(k); }); }catch(e){}
+  try{ var ss = []; for(var j=0;j<sessionStorage.length;j++){ var k2 = sessionStorage.key(j); if(/^fpln/.test(k2)) ss.push(k2); } ss.forEach(function(k){ sessionStorage.removeItem(k); }); }catch(e){}
+  try{ if(window.caches) jobs.push(caches.keys().then(function(n){ return Promise.all(n.filter(function(x){ return /^fpln/.test(x) || /^webllm/i.test(x); }).map(function(x){ return caches.delete(x); })); })); }catch(e){}
+  try{ if(window.indexedDB && indexedDB.databases) jobs.push(indexedDB.databases().then(function(d){ (d||[]).forEach(function(x){ if(x.name && /^(fpln|webllm)/i.test(x.name)) indexedDB.deleteDatabase(x.name); }); })); }catch(e){}
+  try{ if(navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function(r){ return Promise.all(r.filter(function(x){ return x.scope.indexOf(location.origin + "/FPLN-/") === 0; }).map(function(x){ return x.unregister(); })); })); }catch(e){}
+  try{ localStorage.setItem("fpln:lock", JSON.stringify({state:"erase", id:"shutdown-site", msg:"", at:Date.now()})); }catch(e){}
+  Promise.all(jobs).then(done, done);
+  function done(){ document.getElementById("st").textContent = "Done. You can close this window."; }
+  fetch("control.json?t=" + Date.now(), {cache:"no-store"}).then(function(r){ return r.json(); }).then(function(j){ var m = j && j.kill && j.kill.msg; if(m) document.getElementById("msg").textContent = "Message: " + String(m).slice(0, 400); }).catch(function(){});
+})();
+</script></body></html>
