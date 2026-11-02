@@ -1,7 +1,50 @@
 {
   "note": "Libraries FPLN serves from its own site instead of a CDN, so a compromised CDN can't change them. vendor.py downloads each one, checks it, and records its SHA-256 in vendor/manifest.json; the release scan fails if a file stops matching.",
   "libs": [
-    {"name": "mammoth", "ecosystem": "npm", "version": "1.11.0", "url": "https://cdn.jsdelivr.net/npm/mammoth@1.11.0/mammoth.browser.min.js", "file": "mammoth-1.11.0.browser.min.js", "expect": "extractRawText", "why": "CVE-2025-11849 fixed in 1.11.0"},
-    {"name": "xlsx", "ecosystem": "npm", "version": "0.20.3", "url": "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js", "file": "xlsx-0.20.3.full.min.js", "expect": "0.20.3", "why": "CVE-2023-30533 fixed in 0.19.3, CVE-2024-22363 fixed in 0.20.2"}
+    {
+      "name": "mammoth",
+      "ecosystem": "npm",
+      "version": "1.11.0",
+      "url": "https://cdn.jsdelivr.net/npm/mammoth@1.11.0/mammoth.browser.min.js",
+      "file": "mammoth-1.11.0.browser.min.js",
+      "expect": "extractRawText",
+      "why": "CVE-2025-11849 fixed in 1.11.0"
+    },
+    {
+      "name": "xlsx",
+      "ecosystem": "npm",
+      "version": "0.20.3",
+      "url": "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
+      "file": "xlsx-0.20.3.full.min.js",
+      "expect": "0.20.3",
+      "why": "CVE-2023-30533 fixed in 0.19.3, CVE-2024-22363 fixed in 0.20.2"
+    },
+    {
+      "name": "pdfjs-dist",
+      "ecosystem": "npm",
+      "version": "3.11.174",
+      "url": "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",
+      "file": "pdfjs-3.11.174.min.js",
+      "expect": "pdfjsLib",
+      "why": "self-hosted so a compromised CDN can't change it (adversary A7); CVE-2024-4367 mitigated by isEvalSupported:false"
+    },
+    {
+      "name": "pdfjs-dist",
+      "ecosystem": "npm",
+      "version": "3.11.174",
+      "url": "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js",
+      "file": "pdfjs-3.11.174.worker.min.js",
+      "expect": "pdfjsWorker",
+      "why": "PDF reader worker, self-hosted (adversary A7)"
+    },
+    {
+      "name": "@mlc-ai/web-llm",
+      "ecosystem": "npm",
+      "version": "0.2.84",
+      "url": "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.84/+esm",
+      "file": "web-llm-0.2.84.esm.js",
+      "expect": "MLCEngine",
+      "why": "on-device AI, self-hosted if the bundle has no outside imports (adversary A7)"
+    }
   ]
 }
