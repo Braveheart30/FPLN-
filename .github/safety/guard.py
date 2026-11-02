@@ -56,6 +56,8 @@ ALLOW_EMAIL = re.compile(r"@(?:users\.noreply\.github\.com)$|^noreply@anthropic\
 # Where the app may connect. DATA = can carry what a cadet types (only with their own key/consent).
 HOSTS_DATA = {"api.anthropic.com","generativelanguage.googleapis.com","docs.google.com","api.open-meteo.com"}
 HOSTS_LIBS = {"cdn.sheetjs.com","fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net","cdnjs.cloudflare.com","unpkg.com","esm.run","huggingface.co","raw.githubusercontent.com"}
+# Addresses only the safety tooling under .github/ may use (vulnerability databases), never the app.
+HOSTS_CI = {"api.osv.dev","www.cisa.gov"}
 HOSTS_LINKS = {"aistudio.google.com","corp.commissaries.com","history.army.mil","keller.tricare.mil","tools.usps.com","usma.libcal.com","wanderlog.com",
                "westpoint.edu","www.westpoint.edu","www.google.com","www.ikehall.com","www.openstreetmap.org","www.opentable.com","www.shopmyexchange.com",
                "braveheart30.github.io","github.com","westpoint.instructure.com","www.w3.org","console.anthropic.com","schema.org"}
@@ -100,6 +102,7 @@ def scan_text(where, text, secrets_only=False):
     for h in set(re.findall(r"https?://([A-Za-z0-9.-]+\.[A-Za-z]{2,})", text)):
         h = h.lower().rstrip(".")
         if h in ALLOWED_HOSTS or h.endswith(".instructure.com") or h.endswith(".github.io"): continue
+        if h in HOSTS_CI and where.replace(os.sep, "/").startswith(".github/"): continue
         if h in ("localhost",) or h.endswith(".test") or h.endswith(".example") or h == "example.com": continue
         add("NEW ADDRESS (could send data somewhere new)", where, h)
     low = text.lower()

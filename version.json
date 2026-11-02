@@ -1,1 +1,1 @@
-{"version": "0.7.3 beta \u00b7 1 Nov 2026", "note": "Safety update: allowlist and hardened service worker after red-team testing", "built": "202611020400", "kill": {"state": "none", "id": "R-20261102-043736", "msg": ""}}
+{"version": "0.7.4 beta \u00b7 2 Nov 2026", "note": "Safety update: live monitor, patched file readers", "built": "202611020600", "kill": {"state": "none", "id": "R-20261102-043736", "msg": ""}}

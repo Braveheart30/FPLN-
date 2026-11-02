@@ -22,6 +22,7 @@ os.makedirs(SITE)
 for f in ["index.html", "sw.js", "version.json", "control.json", "manifest.webmanifest", "favicon.ico"]:
     shutil.copy(os.path.join(REPO, f), SITE)
 shutil.copytree(os.path.join(REPO, "icons"), os.path.join(SITE, "icons"))
+if os.path.isdir(os.path.join(REPO, "vendor")): shutil.copytree(os.path.join(REPO, "vendor"), os.path.join(SITE, "vendor"))
 # start from a clean signal, whatever the live one says
 subprocess.run([sys.executable, CTL, "restore", "--root", SITE], capture_output=True)
 subprocess.run([sys.executable, CTL, "switches", "--off", "none", "--root", SITE], capture_output=True)
@@ -77,6 +78,18 @@ with sync_playwright() as p:
     check(G, "Safety row in Privacy & security", page.evaluate("!!(window.FPLN_SAFE && window.FPLN_SAFE.row().t)"))
     page.reload(); time.sleep(3)
     check(G, "Service worker in control", page.evaluate("!!navigator.serviceWorker.controller"))
+    rd = page.evaluate("""() => new Promise(res => { const fr = document.getElementById('fClock').contentWindow, doc = fr.document; let n = 0, out = {};
+      ['vendor/xlsx-0.20.3.full.min.js', 'vendor/mammoth-1.11.0.browser.min.js'].forEach(src => { const s = doc.createElement('script'); s.src = src;
+        s.onload = s.onerror = () => { if (++n === 2) res({xlsx: fr.XLSX && fr.XLSX.version, mammoth: !!(fr.mammoth && fr.mammoth.extractRawText)}); }; doc.head.appendChild(s); }); setTimeout(() => res(out), 8000); })""")
+    check(G, "Patched file readers load from FPLN's own site", rd.get("xlsx") == "0.20.3" and rd.get("mammoth"), rd)
+    xs = page.evaluate("""() => { const X = document.getElementById('fClock').contentWindow.XLSX; const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([['Task','Due'],['WPR 2','2026-11-10']]), 'S');
+      const buf = X.write(wb, {type:'array', bookType:'xlsx'}); const back = X.read(buf, {type:'array'}); return X.utils.sheet_to_csv(back.Sheets.S); }""")
+    check(G, "Spreadsheet reader works", "WPR 2" in xs, xs[:40])
+    page.evaluate("window.FPLN_SAFE && window.FPLN_SAFE.monitor()"); time.sleep(1.5)
+    ev = page.evaluate("window.FPLN_MONITOR ? window.FPLN_MONITOR.events() : []")
+    check(G, "Live monitor opens and records", page.evaluate("!!document.getElementById('fplnMon') && !document.getElementById('fplnMon').hidden") and any(e["k"] == "signal" for e in ev) and any(e["k"] == "boot" for e in ev), len(ev))
+    check(G, "Monitor records no content", "BIT TASK" not in json.dumps(ev) and "BIT TASK" not in (page.evaluate("localStorage.getItem('fpln:rec')") or ""))
+    page.evaluate("document.getElementById('fplnMon').hidden = true")
 
     G = "Pause"
     sig("freeze", "--msg", "BIT pause"); nudge(page)

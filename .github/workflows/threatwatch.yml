@@ -1,0 +1,37 @@
+name: FPLN threat watch
+# Test tier 1. Looks up every library FPLN uses in OSV.dev (the open vulnerability database), checks the
+# vaccine list (threats.json), checks that the app's, worker's and browser's allowlists agree, and lists
+# actively exploited browser bugs from CISA's KEV catalog. Fails (and GitHub emails you) on an open vulnerability.
+# Runs on every push, every day at 06:23 UTC, and by hand.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Threat watch
+        run: python3 .github/safety/threatwatch.py --root . --out threatwatch.json
+      - name: Summary
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          try: r = json.load(open("threatwatch.json"))
+          except Exception: print("### FPLN threat watch: did not finish"); raise SystemExit
+          s = r["summary"]
+          print("### FPLN threat watch: %s" % r["result"])
+          print("%d libraries · %d open vulnerabilities · %d mitigated · %d threats on the vaccine list (%d exposed) · %d browser advisories\n" % (s["libraries"], s["open_vulns"], s["mitigated"], s["threats"], s["exposed"], s["advisories"]))
+          print("| Library | Version | Known vulnerabilities |\n|---|---|---|")
+          for l in r["libs"]: print("| %s | %s | %s |" % (l["name"], l["version"], ", ".join(v["id"] + " (" + v["status"].lower() + ")" for v in l["vulns"]) or "none"))
+          print("\n| Threat | Status | Detail |\n|---|---|---|")
+          for t in r["threats"]: print("| %s %s | %s | %s |" % (t["id"], t["name"], t["status"], t["detail"]))
+          for a in r["advisories"]: print("\n- Browser advisory %s: %s (added %s)" % (a["id"], a["product"], a["added"]))
+          PY

