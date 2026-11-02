@@ -31,6 +31,7 @@ ap.add_argument("--level", default="info", choices=["info", "warn"])
 ap.add_argument("--root", default=".")
 ap.add_argument("--by", default="manual")
 ap.add_argument("--ring", default="")
+ap.add_argument("--at", type=int, default=0, help="when the owner gave the order (epoch ms); an older order never overwrites a newer one")
 A = ap.parse_args()
 
 C = os.path.join(A.root, "control.json")
@@ -55,14 +56,25 @@ if ver is None:
 if A.action == "status":
     print(json.dumps({"control": ctl, "version_kill": ver.get("kill")}, indent=2)); sys.exit(0)
 
+KIND = {"freeze": "at_kill", "erase": "at_kill", "restore": "at_kill", "switches": "at_off", "banner": "at_banner", "clear-banner": "at_banner"}.get(A.action)
+def too_old(holder):
+    """True if a newer order of the same kind is already in place (orders sent seconds apart can finish out of order)."""
+    if not A.at or not KIND: return False
+    have = holder.get(KIND) if isinstance(holder, dict) else None
+    if isinstance(have, int) and have > A.at:
+        print("Refused: a newer %s order (given %s) is already live; this one was given %s." % (KIND[3:], have, A.at)); return True
+    return False
+
 RING = A.ring.strip().lower()
 if RING and not re.fullmatch(r"[0-9a-f]{24}", RING):
     sys.exit("--ring must be the 24-character group code")
 if RING and A.action != "status":
     rings = ctl.get("rings") if isinstance(ctl.get("rings"), dict) else {}
     g = rings.get(RING) or {"kill": {"state": "none", "id": "", "msg": ""}, "off": [], "banner": None}
+    if too_old(g): sys.exit(3)
+    if A.at and KIND: g[KIND] = A.at
     if A.action in ("freeze", "erase"): g["kill"] = {"state": A.action, "id": "K-" + stamp, "msg": clean(A.msg)}
-    elif A.action == "restore": g = None
+    elif A.action == "restore": g["kill"] = {"state": "none", "id": "R-" + stamp, "msg": ""}
     elif A.action == "switches":
         raw = [x.strip().lower() for x in A.off.split(",") if x.strip()]
         if raw == ["none"]: raw = []
@@ -73,7 +85,7 @@ if RING and A.action != "status":
         if not A.msg.strip(): sys.exit("--msg is required for a banner")
         g["banner"] = {"id": "B-" + stamp, "text": clean(A.msg, 300), "level": A.level}
     elif A.action == "clear-banner": g["banner"] = None
-    if g is None or (g["kill"]["state"] == "none" and not g["off"] and not g.get("banner")): rings.pop(RING, None)
+    if g["kill"]["state"] == "none" and not g["off"] and not g.get("banner") and not A.at: rings.pop(RING, None)
     else: rings[RING] = g
     ctl["rings"] = rings
     ctl["rev"] = "group-" + A.action + "-" + stamp
@@ -85,6 +97,8 @@ if RING and A.action != "status":
     print("FPLN group %s: %s" % (RING[:6], json.dumps(rings.get(RING)) if RING in rings else "no orders"))
     sys.exit(0)
 
+if too_old(ctl): sys.exit(3)
+if A.at and KIND: ctl[KIND] = A.at
 if A.action in ("freeze", "erase"):
     ctl["kill"] = {"state": A.action, "id": "K-" + stamp, "msg": clean(A.msg)}
 elif A.action == "restore":

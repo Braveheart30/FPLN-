@@ -263,6 +263,18 @@ def c9(b, r):
     r["layers"] = ["L1 main signal", "L2 backup signal"]
     r["verdict"] = "CONTAINED" if locked(pg) else "BREACH"; ctx.close()
 
+@scenario("C10", "Compromise", "Orders arrive out of order", "Pause and Restore are pressed seconds apart; the Restore run finishes first, then the slower Pause run tries to apply. Then an attacker replays an old Pause.", "The newest order wins; an older or replayed order is refused.")
+def c10(b, r):
+    t = int(time.time() * 1000)
+    sig("restore", "--at", str(t + 8000))
+    o1 = subprocess.run([sys.executable, CTL, "freeze", "--at", str(t), "--root", SITE], capture_output=True, text=True)
+    st = json.load(open(os.path.join(SITE, "control.json")))["kill"]["state"]
+    r["observed"].append("Slow pause run: %s · live state: %s" % ("refused" if o1.returncode == 3 else "APPLIED", st))
+    o2 = subprocess.run([sys.executable, CTL, "freeze", "--at", str(t - 86400000), "--root", SITE], capture_output=True, text=True)
+    r["observed"].append("Replayed day-old pause: %s" % ("refused" if o2.returncode == 3 else "APPLIED"))
+    r["layers"] = ["G5 order clock"]
+    r["verdict"] = "CONTAINED" if o1.returncode == 3 and o2.returncode == 3 and st == "none" else "BREACH"
+
 # ---------------- BREAK ----------------
 @scenario("B1", "Break", "Site goes down while paused", "Both signal files start failing (server errors) after the pause.", "Device stays paused.")
 def b1(b, r):
