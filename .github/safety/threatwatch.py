@@ -55,6 +55,10 @@ for t in TH["threats"]:
     if t["type"] == "code-assert":
         ok, _ = assert_ok(t)
         for v in t.get("mitigates", []): mitig[v] = (ok, t["id"])
+    if t["type"] == "dependency":   # a fixed version in use mitigates the advisory even when a database's version range is stale
+        have = [l for l in libs if l["name"] == t["pkg"]]
+        ok = bool(have) and all(vt(l["version"]) >= vt(t["min"]) for l in have)
+        for v in t.get("mitigates", []): mitig[v] = (ok, t["id"])
 
 net = {"osv": None, "kev": None}
 if not A.offline:
