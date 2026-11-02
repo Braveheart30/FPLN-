@@ -1,13 +1,13 @@
 {
   "v": 1,
-  "rev": "restore-20261102-023020",
+  "rev": "restore-20261102-043736",
   "kill": {
     "state": "none",
-    "id": "R-20261102-023020",
+    "id": "R-20261102-043736",
     "msg": ""
   },
   "off": [],
   "banner": null,
-  "updated": "2026-11-02T02:30:20+00:00",
-  "by": "manual"
+  "updated": "2026-11-02T04:37:36+00:00",
+  "by": "command-center"
 }
