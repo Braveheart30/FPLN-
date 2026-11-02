@@ -6,6 +6,8 @@
    4  network block  fetch, XHR, beacons, sockets, pop-ups, links and forms to other sites are refused
    5  browser lock   while paused, a Content-Security-Policy lets the browser itself refuse outside traffic
    6  service worker sw.js reads control.json on its own and refuses outside traffic at the network layer
+   8  allowlist      always on: data can only go to FPLN's known services (app check + browser policy),
+                     so code that sneaks into FPLN can't send anything to a new address
    A signal locks FPLN if ANY copy says so; FPLN unlocks only when every copy it can reach says "none". */
 (function(){
   var W = window, LK = "fpln:lock", CK = "fpln:ctl", RK = "fpln:ring";
@@ -19,6 +21,15 @@
     libs:     {n:"File readers and libraries", h:["cdn.jsdelivr.net","cdnjs.cloudflare.com","unpkg.com","esm.run"]},
     links:    {n:"Outside links", links:true}
   };
+  /* layer 8: the only places FPLN's own code ever sends to or loads from (must match the release scan's list) */
+  var DATA_OK = ["braveheart30.github.io","generativelanguage.googleapis.com","api.anthropic.com","huggingface.co","hf.co","raw.githubusercontent.com",
+    "docs.google.com","api.open-meteo.com","instructure.com","fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net","cdnjs.cloudflare.com","unpkg.com","esm.run"];
+  /* pages a cadet may be sent to by FPLN's own code (links and pop-ups) */
+  var NAV_OK = DATA_OK.concat(["westpoint.edu","google.com","aistudio.google.com","openstreetmap.org","usma.libcal.com","ikehall.com","opentable.com","shopmyexchange.com",
+    "commissaries.com","history.army.mil","keller.tricare.mil","usps.com","wanderlog.com","github.com","console.anthropic.com"]);
+  function onList(url, list){ for(var i=0;i<list.length;i++){ var h = list[i]; if(url.hostname === h || url.hostname.slice(-h.length-1) === "."+h) return true; } return false; }
+  var BLOG = [];
+  function logBlock(url, why){ try{ BLOG.push({h:url.hostname, w:why, at:Date.now()}); if(BLOG.length > 30) BLOG.shift(); }catch(e){} }
   function g(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
   function rawSet(k, v){ try{ Storage.prototype.setItem.call(localStorage, k, v); }catch(e){} }
   function rawDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
@@ -46,16 +57,26 @@
   }
   function off(k){ return (ctl.off || []).indexOf(k) >= 0; }
   /* should this outside request be refused? */
+  /* kind: undefined = data (fetch, XHR, beacon, socket, script, image, frame); true = a link or pop-up; "click" = a scripted click */
   function blocked(u, isLink){
     var url = typeof u === "string" ? hostOf(u) : (u && u.url ? hostOf(u.url) : (u && u.href ? hostOf(u.href) : null));
-    if(!url || !external(url)) return false;
+    if(!url) return false;
+    if(url.protocol === "ws:" || url.protocol === "wss:"){ try{ url = new URL(url.href.replace(/^ws/, "http")); }catch(e){ return true; } }
+    if(!external(url)) return false;
     if(signalHost(url)) return false;               // the safety signal itself always gets through
-    if(locked) return true;
+    if(locked){ logBlock(url, "paused"); return true; }
     var f = featureOf(url);
-    if(f && off(f)) return true;
-    if(isLink && off("links")) return true;
+    if(f && off(f)){ logBlock(url, "switch"); return true; }
+    if(isLink && off("links")){ logBlock(url, "switch"); return true; }
+    if(!isLink && !onList(url, DATA_OK)){ logBlock(url, "allowlist"); return true; }
+    if(isLink === "click" && !onList(url, NAV_OK)){ logBlock(url, "allowlist"); return true; }
+    if(isLink === true && !onList(url, NAV_OK)){ logBlock(url, "allowlist"); return true; }
     return false;
   }
+  /* a link the cadet taps themselves: refused only while paused or when its feature or Links is switched off */
+  function userLinkBlocked(u){ var url = hostOf(u); if(!url || !external(url) || signalHost(url)) return false;
+    if(locked){ logBlock(url, "paused"); return true; } var f = featureOf(url);
+    if((f && off(f)) || off("links")){ logBlock(url, "switch"); return true; } return false; }
   function why(){ return new TypeError("FPLN: blocked by the remote safety switch"); }
 
   /* layer 4: refuse outside traffic from this window (the shell and each page inside it call this) */
@@ -69,17 +90,33 @@
     try{ var WS = w.WebSocket; if(WS){ var NW = function(u, p){ if(blocked(String(u).replace(/^ws/, "http"))) throw why(); return p === undefined ? new WS(u) : new WS(u, p); }; NW.prototype = WS.prototype; w.WebSocket = NW; } }catch(e){}
     try{ var ES = w.EventSource; if(ES){ var NE = function(u, o){ if(blocked(u)) throw why(); return new ES(u, o); }; NE.prototype = ES.prototype; w.EventSource = NE; } }catch(e){}
     try{ var O = w.open; w.open = function(u){ if(u && blocked(String(u), true)) { note("That link is switched off right now."); return null; } return O.apply(this, arguments); }; }catch(e){}
-    try{ w.document.addEventListener("click", function(e){ var a = e.target && e.target.closest && e.target.closest("a[href]"); if(a && blocked(a.href, true)){ e.preventDefault(); e.stopPropagation(); note("That link is switched off right now."); } }, true);
+    try{ w.document.addEventListener("click", function(e){ var a = e.target && e.target.closest && e.target.closest("a[href]"); if(a && (e.isTrusted ? userLinkBlocked(a.href) : blocked(a.href, "click"))){ e.preventDefault(); e.stopPropagation(); note("That link is switched off right now."); } }, true);
       w.document.addEventListener("submit", function(e){ var f = e.target; if(f && f.action && blocked(f.action, true)){ e.preventDefault(); e.stopPropagation(); } }, true); }catch(e){}
     try{ /* scripts and stylesheets added later (AI models, file readers) */
       var desc = Object.getOwnPropertyDescriptor(w.HTMLScriptElement.prototype, "src");
       Object.defineProperty(w.HTMLScriptElement.prototype, "src", {configurable:true, get:function(){ return desc.get.call(this); }, set:function(v){ if(blocked(String(v))) { desc.set.call(this, "data:text/javascript,"); var s = this; setTimeout(function(){ s.dispatchEvent(new w.Event("error")); }, 0); return; } desc.set.call(this, v); }});
     }catch(e){}
+    [["HTMLImageElement","src"],["HTMLIFrameElement","src"],["HTMLSourceElement","src"],["HTMLMediaElement","src"],["HTMLLinkElement","href"]].forEach(function(pr){
+      try{ var P = w[pr[0]] && w[pr[0]].prototype, d = P && Object.getOwnPropertyDescriptor(P, pr[1]); if(!d || !d.set) return;
+        Object.defineProperty(P, pr[1], {configurable:true, get:function(){ return d.get.call(this); }, set:function(v){ if(blocked(String(v))) { d.set.call(this, "about:blank"); return; } d.set.call(this, v); }}); }catch(e){}
+    });
+    try{ var SA = w.Element.prototype.setAttribute; w.Element.prototype.setAttribute = function(n, v){ var ln = String(n).toLowerCase();
+      if((ln === "src" || ln === "href" || ln === "action" || ln === "data") && /^(IMG|IFRAME|SCRIPT|SOURCE|LINK|FORM|OBJECT|EMBED|AUDIO|VIDEO)$/.test(this.tagName) && blocked(String(v))) return;
+      return SA.apply(this, arguments); }; }catch(e){}
     if(locked){ try{ var SI = w.Storage.prototype.setItem; w.Storage.prototype.setItem = function(k, v){ if(this === w.localStorage && /^fpln/.test(k) && k !== LK && k !== CK) return; return SI.apply(this, arguments); }; }catch(e){} }
   }
   W.FPLN_GUARD = arm;
 
   /* layer 5: while paused, the browser itself refuses outside traffic */
+  if(!locked){
+    try{ var mm = document.createElement("meta"); mm.httpEquiv = "Content-Security-Policy";
+      mm.content = "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://esm.run; "+
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; "+
+        "connect-src 'self' data: blob: https://braveheart30.github.io https://generativelanguage.googleapis.com https://api.anthropic.com https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com "+
+        "https://cdn.jsdelivr.net https://esm.run https://docs.google.com https://api.open-meteo.com https://*.instructure.com https://fonts.googleapis.com https://fonts.gstatic.com; "+
+        "worker-src 'self' blob:; frame-src 'self' about: data: blob:; form-action 'self' https://docs.google.com; object-src 'none'; base-uri 'self'";
+      document.head.appendChild(mm); }catch(e){}
+  }
   if(locked){
     try{ var m = document.createElement("meta"); m.httpEquiv = "Content-Security-Policy";
       m.content = "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://braveheart30.github.io; form-action 'none'; frame-src 'self' about: data:; worker-src 'self' blob:";
@@ -170,7 +207,7 @@
       var t = JSON.stringify(o); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ d.querySelector("#fplnLkSt").textContent = "Backup copied. Paste it somewhere safe on this device."; }, function(){ d.querySelector("#fplnLkSt").textContent = "This browser wouldn't copy. Your data stays here either way."; }); };
   }
   /* shown in More › Privacy & security */
-  function status(){ W.FPLN_SAFE = {state: locked ? lock.state : "none", off: ctl.off || [], checked: lastOk, names: FEAT,
+  function status(){ W.FPLN_SAFE = {state: locked ? lock.state : "none", off: ctl.off || [], checked: lastOk, names: FEAT, blocked: BLOG,
     row: function(){ var t = lastOk ? new Date(lastOk) : null, hm = t ? ("0"+t.getHours()).slice(-2)+("0"+t.getMinutes()).slice(-2) : "";
       var offs = (ctl.off || []).map(function(k){ return FEAT[k] ? FEAT[k].n : k; });
       return {k: offs.length ? "warn" : "ok", t: "Remote safety switch armed", d: (t ? "Last checked "+hm+". " : "Checks the official site when online. ") + (offs.length ? "Switched off by the FPLN team for now: "+offs.join(", ")+"." : "If the FPLN team ever pauses FPLN, it stops sending anything anywhere, even offline.")}; }}; }
@@ -1343,7 +1380,7 @@ var DISP = (function(){
 DISP.apply();
 
 /* ================= Feedback: straight to the developer's Google Form, anonymous by default ================= */
-var FPLN_VERSION = "0.7.2 beta \u00b7 1 Nov 2026";
+var FPLN_VERSION = "0.7.3 beta \u00b7 1 Nov 2026";
 var FB = (function(){
   var FORM = "https://docs.google.com/forms/d/e/1FAIpQLSf2YdE91QlvrLtVRfqKF-KoC-do04QxvXyvM3vY6dF4BQavlw/";
   var F_MSG = "entry.1832434695", F_NAME = "entry.1191502103", QKEY = "fpln:fbq";

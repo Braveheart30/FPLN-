@@ -1,0 +1,36 @@
+name: FPLN red team
+# Compromise and break simulations against a private copy of FPLN in a real browser.
+# Shows how every safety layer reacts. Never touches the live site or cadets.
+# Runs every Monday and by hand (Actions > FPLN red team > Run workflow). Fails on any BREACH.
+on:
+  schedule:
+    - cron: "53 11 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  redteam:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install browser
+        run: |
+          pip install playwright==1.48.0
+          python -m playwright install --with-deps chromium
+      - name: Run red team
+        run: python .github/safety/redteam.py --root . --out redteam.json
+      - name: Summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          try: r = json.load(open("redteam.json"))
+          except Exception: print("### FPLN red team: did not finish"); raise SystemExit
+          print("### FPLN red team: %s" % ", ".join("%d %s" % (v, k) for k, v in sorted(r["summary"].items())))
+          print("| ID | Scenario | Verdict | Layers | Observed |\n|---|---|---|---|---|")
+          for s in r["scenarios"]: print("| %s | %s | **%s** | %s | %s |" % (s["id"], s["title"], s["verdict"], ", ".join(s["layers"]), " · ".join(s["observed"])))
+          PY
