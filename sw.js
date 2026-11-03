@@ -1,7 +1,7 @@
 /* FPLN service worker: newest version on every launch, works offline after the first visit.
    Safety layer 6: reads control.json on its own and, while FPLN is paused or shut down, refuses
    every request to another site at the network layer, even if the page's own code fails. */
-const CACHE = 'fpln-202611021400';
+const CACHE = 'fpln-202611031026';
 const CTL = 'fpln-ctl';
 const CORE = ['./', './index.html', './manifest.webmanifest', './favicon.ico', './icons/icon-32.png', './icons/icon-64.png', './icons/icon-192.png', './icons/icon-512.png'];
 const FEAT = {
