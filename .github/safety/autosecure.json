@@ -2,19 +2,8 @@
   "v": 1,
   "enabled": true,
   "device": true,
-  "applied": {
-    "eric": {
-      "at": 1793761313000,
-      "sig": [
-        "A2"
-      ]
-    }
-  },
-  "banner": {
-    "text": "FPLN is running a safety check on one feature. Your planner is safe on this device.",
-    "at": 1793761313000,
-    "kind": "contain"
-  },
+  "applied": {},
+  "banner": null,
   "overridden": {},
   "history": [
     {
@@ -24,6 +13,31 @@
     {
       "at": "2026-11-04T03:01:53+00:00",
       "what": "switched off Eric for every cadet: A2 (daily run on 0.7.6; Eric deleted a task without the cadet confirming), and set a safety-check banner"
+    },
+    {
+      "at": "2026-11-04T15:20:33+00:00",
+      "what": "tests for Eric pass again; turned it back on"
+    },
+    {
+      "at": "2026-11-04T15:20:33+00:00",
+      "what": "every feature is back on; safety-check banner removed"
+    },
+    {
+      "at": "2026-11-04T15:20:33+00:00",
+      "what": "reported only (no feature to switch off): P1"
+    },
+    {
+      "at": "2026-11-04T15:20:33+00:00",
+      "what": "reported only (no feature to switch off): P2"
     }
-  ]
+  ],
+  "checked": "2026-11-04T15:20:33+00:00",
+  "last": {
+    "failures": {},
+    "advisory": [],
+    "unmapped": [
+      "P1",
+      "P2"
+    ]
+  }
 }

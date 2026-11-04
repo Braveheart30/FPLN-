@@ -1,22 +1,18 @@
 {
   "v": 1,
-  "rev": "banner-20261104-030153",
+  "rev": "clear-banner-20261104-152033",
   "kill": {
     "state": "none",
     "id": "R-20261102-043736",
     "msg": ""
   },
-  "off": [
-    "eric"
-  ],
-  "banner": {
-    "id": "B-20261104-030153",
-    "text": "FPLN is running a safety check on one feature. Your planner is safe on this device.",
-    "level": "info"
-  },
-  "updated": "2026-11-04T03:01:53+00:00",
-  "by": "auto-secure",
+  "off": [],
+  "banner": null,
+  "updated": "2026-11-04T15:20:33+00:00",
+  "by": "autosecure",
   "autosecure": {
     "device": true
-  }
+  },
+  "at_off": 1793805633368,
+  "at_banner": 1793805633400
 }
