@@ -112,6 +112,12 @@ def decide(st, ctl, fails, advis, unm):
         text = "Update %s today: there's a security bug attackers are using right now. Restart the browser after updating." % " and ".join(advis)
         if not st.get("banner") or st["banner"].get("text") != text:
             bn = ("set", text); st["banner"] = {"text": text, "at": t}; ev.append({"at": iso(t), "what": "browser advisory banner: " + ", ".join(advis)})
+    elif st["applied"] and not st.get("banner") and not (ctl.get("banner") and ctl.get("by") not in ("autosecure", "auto-secure")):
+        names = " and ".join(NAMES.get(f, f) for f in sorted(st["applied"]))
+        text = "%s is off for a safety check. Your planner is safe on this device." % names
+        bn = ("set", text); st["banner"] = {"text": text, "at": t, "kind": "contain"}; ev.append({"at": iso(t), "what": "safety-check banner: " + names})
+    elif st.get("banner") and st["banner"].get("kind") == "contain":
+        if not st["applied"]: bn = ("clear", ""); st["banner"] = None; ev.append({"at": iso(t), "what": "every feature is back on; safety-check banner removed"})
     elif st.get("banner") and (not advis or t - st["banner"]["at"] > 14 * 864e5):
         bn = ("clear", ""); st["banner"] = None; ev.append({"at": iso(t), "what": "browser advisory banner removed"})
     for u in unm: ev.append({"at": iso(t), "what": "reported only (no feature to switch off): " + u})
@@ -130,7 +136,7 @@ def cmd_decide(A):
             code, out = control(root, "switches", "--off", ",".join(new_off) or "none"); print(out)
             if code == 3: ev.append({"at": iso(), "what": "a newer owner order was live; auto-secure didn't change switches"})
         if bn:
-            code, out = control(root, *(["banner", "--msg", bn[1], "--level", "warn"] if bn[0] == "set" else ["clear-banner"])); print(out)
+            code, out = control(root, *(["banner", "--msg", bn[1], "--level", "info" if (st2.get("banner") or {}).get("kind") == "contain" else "warn"] if bn[0] == "set" else ["clear-banner"])); print(out)
         st2["history"] = (st2.get("history", []) + ev)[-60:]; st2["checked"] = iso()
         st2["last"] = {"failures": fails, "advisory": advis, "unmapped": unm}
         save(sp, st2)
@@ -186,6 +192,15 @@ def cmd_selftest(A):
     check("an exploited browser bug sets the update banner", bn8 and bn8[0] == "set" and "Chrome" in bn8[1])
     _, _, bn9, _ = decide(st8, {"off": [], "by": "autosecure"}, {}, [], [])
     check("the banner is cleared when the advisory ages out", bn9 and bn9[0] == "clear")
+    stc = json.loads(json.dumps(DEFAULT)); stc["applied"] = {"eric": {"at": 0, "sig": ["A2"]}}; stc["banner"] = {"text": "check", "at": 0, "kind": "contain"}
+    _, _, bnc, _ = decide(stc, {"off": ["eric"], "banner": {"text": "check"}, "by": "auto-secure"}, {"eric": ["A2"]}, [], [])
+    check("a safety-check banner stays while its feature is still off", bnc is None)
+    _, offc, bnc2, _ = decide(stc, {"off": ["eric"], "banner": {"text": "check"}, "by": "auto-secure"}, {}, [], [])
+    check("and is removed when the feature comes back", bnc2 == ("clear", "") and offc == [])
+    _, _, bnn, _ = decide(json.loads(json.dumps(DEFAULT)), {"off": [], "banner": None, "by": "command-center"}, {"canvas": ["A4"]}, [], [])
+    check("switching a feature off tells cadets why, calmly", bnn and bnn[0] == "set" and "safety check" in bnn[1])
+    _, _, bno, _ = decide(json.loads(json.dumps(DEFAULT)), {"off": [], "banner": {"text": "Owner message"}, "by": "command-center"}, {"canvas": ["A4"]}, [], [])
+    check("but never over the owner's banner", bno is None)
     _, _, bn10, _ = decide(DEFAULT, {"off": [], "banner": {"text": "Owner message"}, "by": "command-center"}, {}, browser_advisory(tw_kev), [])
     check("an owner's own banner is never replaced", bn10 is None)
     # end to end against a scratch copy of the signal files
