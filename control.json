@@ -1,13 +1,19 @@
 {
   "v": 1,
-  "rev": "restore-20261102-043736",
+  "rev": "banner-20261104-030153",
   "kill": {
     "state": "none",
     "id": "R-20261102-043736",
     "msg": ""
   },
-  "off": [],
-  "banner": null,
-  "updated": "2026-11-02T04:37:36+00:00",
-  "by": "command-center"
+  "off": [
+    "eric"
+  ],
+  "banner": {
+    "id": "B-20261104-030153",
+    "text": "FPLN is running a safety check on one feature. Your planner is safe on this device.",
+    "level": "info"
+  },
+  "updated": "2026-11-04T03:01:53+00:00",
+  "by": "auto-secure"
 }
