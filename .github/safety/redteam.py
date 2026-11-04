@@ -18,6 +18,16 @@ Exit code 1 on any BREACH.
 """
 import argparse, functools, http.server, json, os, re, shutil, socketserver, subprocess, sys, tempfile, threading, time, datetime
 
+# Waiting must keep the browser automation running: a plain sleep pauses Playwright's request interception, so a
+# request the app (or an attack) makes during the wait would sit unanswered and unrecorded until the next call.
+PAGES = []
+def nap(s):
+    for p in reversed(PAGES):
+        try:
+            if not p.is_closed(): p.wait_for_timeout(int(s * 1000)); return
+        except Exception: pass
+    time.sleep(s)
+
 ap = argparse.ArgumentParser()
 ap.add_argument("--root", default=".")
 ap.add_argument("--out", default="")
@@ -114,11 +124,12 @@ SCEN = []
 
 def new_ctx(b, csp_log=True):
     ctx = b.new_context()
+    ctx.on("page", lambda p: PAGES.append(p))
     ctx.route("https://braveheart30.github.io/FPLN-/*", lambda rt: rt.fulfill(path=os.path.join(SITE, rt.request.url.split("/FPLN-/")[1].split("?")[0].split("#")[0])) if os.path.exists(os.path.join(SITE, rt.request.url.split("/FPLN-/")[1].split("?")[0].split("#")[0])) else rt.fulfill(status=404, body="missing"))
     if csp_log: ctx.add_init_script("window.__csp=[];document.addEventListener('securitypolicyviolation',e=>window.__csp.push(e.blockedURI||''));")
     return ctx
 def install(ctx, data=True):
-    pg = ctx.new_page(); pg.goto(URL); time.sleep(4); pg.reload(); time.sleep(3)
+    pg = ctx.new_page(); pg.goto(URL); nap(4); pg.reload(); nap(3)
     if data: pg.evaluate("localStorage.setItem('fpln:clock', JSON.stringify({v:3,tasks:[{id:'r1',t:'PLANNER SECRET'}]}))")
     return pg
 def done(ctx, pg, r):
@@ -137,7 +148,7 @@ def nudge(pg, reload=True):
             with pg.expect_navigation(timeout=12000): pg.evaluate("dispatchEvent(new Event('online'))")
         except Exception: pass
     else: pg.evaluate("dispatchEvent(new Event('online'))")
-    pg.wait_for_load_state("domcontentloaded"); time.sleep(3)
+    pg.wait_for_load_state("domcontentloaded"); nap(3)
 def locked(pg):
     try: return pg.evaluate("!!document.getElementById('fplnLocked')")
     except Exception: return False
@@ -189,7 +200,7 @@ def c3(b, r):
     # 2) if it shipped anyway
     ctx = new_ctx(b); pg = install(ctx)
     write("index.html", strip_guard(read("index.html")))
-    pg.reload(); time.sleep(4)
+    pg.reload(); nap(4)
     guardless = pg.evaluate("!window.FPLN_GUARD")
     out = pg.evaluate(EXFIL, ATK); csp = pg.evaluate("window.__csp||[]")
     got, layers = attribute(r, out, csp)
@@ -204,7 +215,7 @@ def c4(b, r):
     ctx = new_ctx(b); pg = install(ctx)
     write("index.html", strip_guard(read("index.html")))
     write("sw.js", "self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));")
-    pg.evaluate("navigator.serviceWorker.getRegistration().then(r=>r&&r.update())"); time.sleep(3); pg.reload(); time.sleep(4)
+    pg.evaluate("navigator.serviceWorker.getRegistration().then(r=>r&&r.update())"); nap(3); pg.reload(); nap(4)
     out = pg.evaluate(EXFIL, ATK); csp = pg.evaluate("window.__csp||[]")
     got, layers = attribute(r, out, csp)
     r["observed"].append("%d of %d channels got out once the attacker replaced every file" % (len(got), len(CHANNELS)))
@@ -218,9 +229,9 @@ def c5(b, r):
     sig("freeze", "--msg", "Paused"); nudge(pg)
     states = []
     c = json.load(open(os.path.join(SITE, "control.json"))); c["kill"] = {"state": "none", "id": "forged"}; write("control.json", json.dumps(c))
-    nudge(pg, False); time.sleep(2); states.append(("forged none", locked(pg)))
-    write("control.json", "{ this is not json"); nudge(pg, False); time.sleep(2); states.append(("corrupt file", locked(pg)))
-    c["kill"] = {"state": "unlock-everything", "id": "x"}; write("control.json", json.dumps(c)); nudge(pg, False); time.sleep(2); states.append(("unknown state", locked(pg)))
+    nudge(pg, False); nap(2); states.append(("forged none", locked(pg)))
+    write("control.json", "{ this is not json"); nudge(pg, False); nap(2); states.append(("corrupt file", locked(pg)))
+    c["kill"] = {"state": "unlock-everything", "id": "x"}; write("control.json", json.dumps(c)); nudge(pg, False); nap(2); states.append(("unknown state", locked(pg)))
     for n, s in states: r["observed"].append("%s: %s" % (n, "still paused" if s else "UNPAUSED"))
     r["layers"] = ["L2 backup signal", "L3 device latch"]
     r["verdict"] = "CONTAINED" if all(s for _, s in states) else "BREACH"; done(ctx, pg, r)
@@ -229,9 +240,9 @@ def c5(b, r):
 def c6(b, r):
     ctx = new_ctx(b); pg = install(ctx)
     pay = '<img src=x onerror="window.__pwned=1"><script>window.__pwned=2</script>'
-    sig("banner", "--msg", pay); nudge(pg, False); time.sleep(3)
+    sig("banner", "--msg", pay); nudge(pg, False); nap(3)
     t1 = pg.evaluate("(document.getElementById('fplnBanner')||{}).textContent||''"); p1 = pg.evaluate("window.__pwned||0")
-    sig("clear-banner"); sig("freeze", "--msg", pay); nudge(pg); time.sleep(1)
+    sig("clear-banner"); sig("freeze", "--msg", pay); nudge(pg); nap(1)
     t2 = pg.evaluate("(document.getElementById('fplnLocked')||{}).textContent||''"); p2 = pg.evaluate("window.__pwned||0")
     r["observed"].append("Banner: %s" % ("shown as text, nothing ran" if "onerror" in t1 and not p1 else "CODE RAN" if p1 else "not shown"))
     r["observed"].append("Pause message: %s" % ("shown as text, nothing ran" if "onerror" in t2 and not p2 else "CODE RAN" if p2 else "not shown"))
@@ -242,7 +253,7 @@ def c6(b, r):
 def c7(b, r):
     ctx = new_ctx(b); pg = install(ctx)
     sig("freeze", "--msg", "Paused"); nudge(pg)
-    pg.evaluate("localStorage.removeItem('fpln:lock'); caches.delete('fpln-ctl')"); pg.reload(); time.sleep(5)
+    pg.evaluate("localStorage.removeItem('fpln:lock'); caches.delete('fpln-ctl')"); pg.reload(); nap(5)
     rel = locked(pg)
     if not rel: nudge(pg); rel = locked(pg)
     out = pg.evaluate(EXFIL, ATK); csp = pg.evaluate("window.__csp||[]"); got, layers = attribute(r, out, csp)
@@ -254,7 +265,7 @@ def c7(b, r):
 def c8(b, r):
     ctx = new_ctx(b); pg = install(ctx)
     pg.evaluate("setInterval(()=>{ try{ localStorage.setItem('fpln:clock','{\"tasks\":[{\"t\":\"PLANNER SECRET\"}]}'); localStorage.setItem('fpln:dash','x'); }catch(e){} }, 50)")
-    sig("erase", "--msg", "Shut down"); nudge(pg); time.sleep(2)
+    sig("erase", "--msg", "Shut down"); nudge(pg); nap(2)
     keys = pg.evaluate("Object.keys(localStorage)")
     left = [k for k in keys if k.startswith("fpln") and k not in ("fpln:lock", "fpln:ring")]
     r["observed"].append("FPLN data left after erase: %s" % (", ".join(left) if left else "none"))
@@ -266,10 +277,10 @@ def c9(b, r):
     import hashlib
     ctx = new_ctx(b); pg = install(ctx)
     tok = "redteamgroup0000000001"; h = hashlib.sha256(tok.encode()).hexdigest()[:24]
-    pg.goto(URL + "#ring=" + tok); time.sleep(3)
+    pg.goto(URL + "#ring=" + tok); nap(3)
     sig("freeze", "--msg", "Paused"); sig("switches", "--ring", h, "--off", "none")
     c = json.load(open(os.path.join(SITE, "control.json"))); c.setdefault("rings", {})[h] = {"kill": {"state": "none", "id": "fake"}, "off": [], "banner": None}; write("control.json", json.dumps(c))
-    nudge(pg); time.sleep(1)
+    nudge(pg); nap(1)
     r["observed"].append("Device in group: %s · paused: %s" % ("yes" if pg.evaluate("localStorage.getItem('fpln:ring')") == h else "no", "yes" if locked(pg) else "NO"))
     r["layers"] = ["L1 main signal", "L2 backup signal"]
     r["verdict"] = "CONTAINED" if locked(pg) else "BREACH"; done(ctx, pg, r)
@@ -292,7 +303,7 @@ def b1(b, r):
     ctx = new_ctx(b); pg = install(ctx)
     sig("freeze", "--msg", "Paused"); nudge(pg)
     os.remove(os.path.join(SITE, "control.json")); os.remove(os.path.join(SITE, "version.json"))
-    nudge(pg, False); pg.reload(); time.sleep(4)
+    nudge(pg, False); pg.reload(); nap(4)
     r["observed"].append("Paused after site failure and restart: %s" % ("yes" if locked(pg) else "NO"))
     r["layers"] = ["L3 device latch", "L6 service worker"]
     r["verdict"] = "CONTAINED" if locked(pg) else "BREACH"; done(ctx, pg, r)
@@ -301,7 +312,7 @@ def b1(b, r):
 def b2(b, r):
     ctx = new_ctx(b); pg = install(ctx)
     os.remove(os.path.join(SITE, "control.json")); os.remove(os.path.join(SITE, "version.json"))
-    nudge(pg, False); pg.reload(); time.sleep(4)
+    nudge(pg, False); pg.reload(); nap(4)
     works = (not locked(pg)) and pg.evaluate("(document.getElementById('fClock').srcdoc||'').length>1000")
     out = pg.evaluate(EXFIL, ATK); csp = pg.evaluate("window.__csp||[]"); got, layers = attribute(r, out, csp)
     r["observed"].append("App still works: %s · theft still blocked: %s" % ("yes" if works else "NO", "yes" if not got else "NO"))
@@ -313,7 +324,7 @@ def b2(b, r):
 def b3(b, r):
     ctx = new_ctx(b); pg = install(ctx)
     sig("freeze", "--msg", "Paused"); nudge(pg)
-    pg.evaluate("navigator.serviceWorker.getRegistrations().then(rs=>Promise.all(rs.map(x=>x.unregister())))"); time.sleep(1); pg.reload(); time.sleep(4)
+    pg.evaluate("navigator.serviceWorker.getRegistrations().then(rs=>Promise.all(rs.map(x=>x.unregister())))"); nap(1); pg.reload(); nap(4)
     out = pg.evaluate(EXFIL, ATK); csp = pg.evaluate("window.__csp||[]"); got, layers = attribute(r, out, csp)
     r["observed"].append("Paused: %s · %d channels got out" % ("yes" if locked(pg) else "NO", len(got)))
     r["layers"] = ["L3 device latch", "L5 browser lock"] + [l for l in layers if not l.startswith("L6")]
@@ -323,7 +334,7 @@ def b3(b, r):
 def b4(b, r):
     ctx = new_ctx(b); pg = install(ctx)
     sig("freeze", "--msg", "Paused"); nudge(pg)
-    write("index.html", strip_guard(read("index.html"))); pg.reload(); time.sleep(4)
+    write("index.html", strip_guard(read("index.html"))); pg.reload(); nap(4)
     out = pg.evaluate(EXFIL, ATK); csp = pg.evaluate("window.__csp||[]"); got, layers = attribute(r, out, csp)
     screen = "app pause screen" if locked(pg) else ("worker's own pause screen" if "paused" in (pg.inner_text("body") or "").lower() else "none")
     r["observed"].append("Shown: %s · %d channels got out" % (screen, len(got)))
@@ -334,7 +345,7 @@ def b4(b, r):
 def b5(b, r):
     ctx = new_ctx(b); pg = install(ctx)
     sig("freeze", "--msg", "Paused"); nudge(pg)
-    pg.evaluate("localStorage.clear()"); t0 = time.time(); pg.reload(); time.sleep(2)
+    pg.evaluate("localStorage.clear()"); t0 = time.time(); pg.reload(); nap(2)
     if not locked(pg): nudge(pg)
     r["observed"].append("Re-locked: %s (about %d s)" % ("yes" if locked(pg) else "NO", time.time() - t0))
     r["layers"] = ["L1 main signal", "L6 service worker"]
@@ -353,7 +364,7 @@ def b6(b, r):
 @scenario("B7", "Break", "Device offline when the pause is sent", "The device is offline when the owner pauses, then reconnects.", "Nothing can leave while offline; the pause applies on reconnect.")
 def b7(b, r):
     ctx = new_ctx(b); pg = install(ctx)
-    ctx.set_offline(True); sig("freeze", "--msg", "Paused"); time.sleep(2)
+    ctx.set_offline(True); sig("freeze", "--msg", "Paused"); nap(2)
     before = locked(pg); ctx.set_offline(False); t0 = time.time(); nudge(pg)
     r["observed"].append("Paused while offline: %s · paused after reconnect: %s (about %d s)" % ("yes" if before else "no (expected)", "yes" if locked(pg) else "NO", time.time() - t0))
     r["layers"] = ["L1 main signal"]
@@ -390,7 +401,7 @@ def v1(b, r):
             ok = out != "AVAILABLE"; how = "Removed by app guard (L4)" if ok else "AVAILABLE"
         else:
             csp0 = len(pg.evaluate("window.__csp||[]"))
-            out = pg.evaluate(TECH, [t["technique"], ATK]); time.sleep(0.5)
+            out = pg.evaluate(TECH, [t["technique"], ATK]); nap(0.5)
             csp = pg.evaluate("window.__csp||[]")[csp0:]
             hit = any(h.startswith(t["technique"]) for h in HITS)
             external = t["technique"] == "attacker-form"

@@ -160,7 +160,7 @@ self.addEventListener('message', e => {
     CV = d.cv && typeof d.cv.host === 'string' && /^[a-z0-9.-]+\.instructure\.com$/i.test(d.cv.host) ? { host: d.cv.host.toLowerCase(), th: /^[0-9a-f]{64}$/.test(d.cv.th || '') ? d.cv.th : '' } : null;
     e.waitUntil(caches.open(CTL).then(c => c.put('keys', new Response(JSON.stringify({ h: KEYS, cv: CV })))));
   }
-  if (d && d.t === 'fpln-cand' && /^[0-9a-f]{64}$/.test(d.h || '')) { CANDS.set(d.h, Date.now() + 6e5); if (CANDS.size > 20) CANDS.delete(CANDS.keys().next().value); }
+  if (d && d.t === 'fpln-cand' && /^[0-9a-f]{64}$/.test(d.h || '')) { CANDS.set(d.h, Date.now() + 6e5); if (CANDS.size > 20) CANDS.delete(CANDS.keys().next().value); try { if (e.ports && e.ports[0]) e.ports[0].postMessage('ok'); } catch (x) {} }
   if (d && d.t === 'fpln-auto' && [0, 1, 2].includes(d.lv) && d.lv !== AUTO_LV) { AUTO_LV = d.lv; e.waitUntil(caches.open(CTL).then(c => c.put('auto', new Response(String(AUTO_LV))))); }
   if (d === 'fpln-safety-check') e.waitUntil(refresh(true));
 });

@@ -225,7 +225,7 @@
       Object.defineProperty(P, prop, {configurable:true, get:function(){ var v = d.get.call(this); try{ arm(prop === "contentWindow" ? v : (v && v.defaultView)); }catch(e){} return v; }}); }catch(e){} });
     try{ var F = w.fetch; if(F) w.fetch = function(i, o){ var meth = (o && o.method) || (i && typeof i === "object" && i.method) || "GET", hd = (o && o.headers) || (i && typeof i === "object" && i.headers);
       if(blocked(i, undefined, meth, hd)) return Promise.reject(why());
-      var u = hostOf(typeof i === "string" ? i : (i && i.url) || ""), t0 = Date.now(), p = F.apply(this, arguments);
+      var u = hostOf(typeof i === "string" ? i : (i && i.url) || ""), t0 = Date.now(), fs = this, fa = arguments, cw = candWait(u, hd), p = cw ? cw.then(function(){ return F.apply(fs, fa); }) : F.apply(this, arguments);
       if(u && external(u) && !signalHost(u)){ GAUGE.allowed++; rec("net", u.hostname, ((o && o.method) || (i && i.method) || "GET").toUpperCase());
         p.then(function(r){ rec("net-done", u.hostname, (r.type === "opaque" ? "sent" : r.status)+" · "+(Date.now()-t0)+" ms", r.ok || r.type === "opaque" ? "i" : "c"); }, function(){ rec("net-fail", u.hostname, (Date.now()-t0)+" ms", "c"); }); }
       return p; }; }catch(e){}
@@ -388,6 +388,15 @@
   function sha(t){ return crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)).then(function(b){ return Array.prototype.map.call(new Uint8Array(b), function(x){ return ("0"+x.toString(16)).slice(-2); }).join(""); }); }
   var candT = {};
   function candHash(v){ clearTimeout(candT.t); candT.t = setTimeout(function(){ sha(v).then(function(h){ try{ var c = navigator.serviceWorker && navigator.serviceWorker.controller; if(c) c.postMessage({t:"fpln-cand", h:h}); }catch(e){} }); }, 250); }
+  /* a key or token the cadet just typed: hand its fingerprint to the worker and wait for it to confirm, so the
+     first request with it (Save and test, the first sync) isn't refused by the worker's pin. Never waits more than 0.8 s. */
+  function candSend(v){ return sha(v).then(function(h){ return new Promise(function(res){ try{ var c = navigator.serviceWorker && navigator.serviceWorker.controller; if(!c) return res();
+      var ch = new MessageChannel(); ch.port1.onmessage = function(){ res(); }; c.postMessage({t:"fpln-cand", h:h}, [ch.port2]); setTimeout(res, 800); }catch(e){ res(); } }); }, function(){}); }
+  function candWait(u, hd){ if(!u) return null; var used = "";
+    if(aiHost(u)){ used = u.key || hdr(hd, "x-goog-api-key") || hdr(hd, "x-api-key") || ""; if(used && used === (g(AIH[aiHost(u)]) || "")) return null; }
+    else if(/(^|\.)instructure\.com$/.test(u.hostname)){ used = String(hdr(hd, "authorization") || "").replace(/^Bearer\s+/, ""); if(used && used === canvasCfg().token) return null; }
+    else return null;
+    return used && isCand(used) ? candSend(used) : null; }
   function swAuto(){ try{ var c = navigator.serviceWorker && navigator.serviceWorker.controller; if(c) c.postMessage({t:"fpln-auto", lv:AUTO.lv}); }catch(e){} }
   function keyHashes(){ var ks = [g("fpln:eric:gemini"), g("fpln:eric:key")].filter(Boolean);
     return Promise.all(ks.map(function(k){ return crypto.subtle.digest("SHA-256", new TextEncoder().encode(k)).then(function(b){ return Array.prototype.map.call(new Uint8Array(b), function(x){ return ("0"+x.toString(16)).slice(-2); }).join(""); }); })).catch(function(){ return []; }); }
