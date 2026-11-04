@@ -1,0 +1,14 @@
+{
+  "v": 1,
+  "enabled": true,
+  "device": true,
+  "applied": {},
+  "banner": null,
+  "overridden": {},
+  "history": [
+    {
+      "at": "2026-11-03T15:44:34+00:00",
+      "what": "owner: devices on"
+    }
+  ]
+}

@@ -9,5 +9,8 @@
   "off": [],
   "banner": null,
   "updated": "2026-11-02T04:37:36+00:00",
-  "by": "command-center"
+  "by": "command-center",
+  "autosecure": {
+    "device": true
+  }
 }

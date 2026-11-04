@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#121417">
+<meta name="robots" content="noindex,nofollow"><meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' blob: data:; frame-src 'self' blob:; worker-src 'self' blob:; form-action 'none'; object-src 'none'; base-uri 'self'"><meta name="theme-color" content="#121417">
 <title>FPLN Test Range</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=B612:wght@400;700&family=B612+Mono:wght@400;700&display=swap">
 <style>
@@ -83,7 +83,7 @@ details.rep{margin-top:12px} details.rep summary{cursor:pointer;font:700 12px va
   <div class="seg" role="group" aria-label="Speed"><button type="button" data-speed="watch" aria-pressed="true">Watch</button><button type="button" data-speed="fast" aria-pressed="false">Fast</button></div>
   <button type="button" class="go" id="runAll">Run all</button>
   <button type="button" class="stop" id="stop" disabled>Stop</button>
-  <button type="button" id="copy">Copy results</button>
+  <button type="button" id="copy">Copy report</button>
 </div>
 <div class="warn" id="warn" hidden></div>
 
@@ -156,6 +156,7 @@ function isAttack(u){ return /fpln-range\.invalid|1FAIpQLattacker/.test(String(u
 RANGE.reach = function(u, how){ RANGE.reached.push({u: String(u), how: how, at: Date.now()}); };
 RANGE.install = function(w){
   if(w.__rangeInstalled) return; w.__rangeInstalled = true;
+  try{ if(!w.__FPLN_PRE) w.__FPLN_PRE = RANGE.install; }catch(e){}   // lets the app's guard isolate each new window before guarding it
   var L = fakeStorageClass(RANGE.local), Ss = fakeStorageClass(RANGE.session), li = new L(), si = new Ss();
   Object.defineProperty(w, "localStorage", {configurable: true, get: function(){ return li; }});
   Object.defineProperty(w, "sessionStorage", {configurable: true, get: function(){ return si; }});
@@ -201,7 +202,8 @@ RANGE.install = function(w){
 var BK = "range:fpln-backup";
 function realSnap(){ var o = {}; try{ for(var i=0;i<localStorage.length;i++){ var k = localStorage.key(i); if(/^fpln/.test(k)) o[k] = localStorage.getItem(k); } }catch(e){} return o; }
 var REAL0 = null;
-function realChanged(){ var now = realSnap(), a = Object.keys(REAL0 || {}), b = Object.keys(now); if(a.length !== b.length) return true; return a.some(function(k){ return now[k] !== REAL0[k]; }); }
+function realDiff(){ var now = realSnap(), ks = {}; Object.keys(REAL0 || {}).concat(Object.keys(now)).forEach(function(k){ if(now[k] !== (REAL0 || {})[k]) ks[k] = 1; }); return Object.keys(ks); }
+function realChanged(){ return realDiff().length > 0; }
 function realRestore(){ try{ Object.keys(realSnap()).forEach(function(k){ if(!(k in REAL0)) localStorage.removeItem(k); }); Object.keys(REAL0).forEach(function(k){ localStorage.setItem(k, REAL0[k]); }); }catch(e){} }
 (function recover(){ try{ var b = localStorage.getItem(BK); if(!b) return; REAL0 = JSON.parse(b); if(realChanged()){ realRestore(); warn("A previous test run was interrupted. Your FPLN data on this browser was restored from the backup taken before it."); } localStorage.removeItem(BK); }catch(e){} })();
 function warn(t){ $("warn").textContent = t; $("warn").hidden = false; }
@@ -355,7 +357,7 @@ var SCN = [
     result("S1", "Safety guard armed", !!w.FPLN_GUARD); light("L4");
     var ok = await until(function(){ return w.document.getElementById("fClock").contentWindow.__fplnArmed; }, 5000); result("S1", "Guard armed inside the planner page", ok);
     result("S1", "Flight recorder running", !!(w.FPLN_MONITOR && w.FPLN_MONITOR.events().some(function(e){ return e.k === "boot"; })));
-    var real = realChanged(); result("S1", "Your real FPLN data untouched", !real); if(real){ realRestore(); }
+    var rdf = realDiff(); result("S1", "Your real FPLN data untouched", !rdf.length, rdf.join(", ")); if(rdf.length){ realRestore(); }
   }},
   {id: "S2", name: "Data theft, 12 ways (normal use)", run: async function(){ await normal();
     for(var i=0;i<CHANNELS.length;i++) await fire("S2", CHANNELS[i][0], CHANNELS[i][1], CHANNELS[i][2]); }},
@@ -438,7 +440,7 @@ async function runList(ids){
     var before = fail; STATES[s.id] = "RUNNING"; drawScn(s.id, STATES); hlog("scenario", s.id + " " + s.name, "s");
     try{ await s.run(); }catch(e){ if(stopFlag) break; result(s.id, "Scenario error", false, String(e.message || e)); }
     if(!onApp()){ result(s.id, "Test copy stayed isolated", false, "it left the range; restarting"); await boot(); }
-    if(realChanged()){ realRestore(); result(s.id, "Your real FPLN data untouched", false, "changed during the test and was restored"); warn("The test touched your real FPLN data. It was restored from the backup. Please tell Claude."); }
+    var rd = realDiff(); if(rd.length){ realRestore(); result(s.id, "Your real FPLN data untouched", false, "changed during the test and was restored: " + rd.join(", ")); warn("The test touched your real FPLN data. It was restored from the backup. Please tell Claude."); }
     STATES[s.id] = fail > before ? "FAIL" : "PASS"; drawScn("", STATES);
     if(stopFlag) break;
   }
@@ -450,8 +452,19 @@ async function runList(ids){
 $("runAll").onclick = function(){ runList(SCN.map(function(s){ return s.id; })); };
 $("stop").onclick = function(){ stopFlag = true; $("stop").disabled = true; now("STOPPING…", "Finishing the current step."); };
 document.querySelectorAll("[data-speed]").forEach(function(b){ b.onclick = function(){ speed = b.dataset.speed; document.querySelectorAll("[data-speed]").forEach(function(x){ x.setAttribute("aria-pressed", x === b ? "true" : "false"); }); }; });
-$("copy").onclick = function(){ var t = JSON.stringify({range: "FPLN Test Range", version: VERSION && VERSION.version, at: new Date().toISOString(), browser: navigator.userAgent, passed: pass, failed: fail, stopped: blocked, results: RES}, null, 1);
-  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ $("copy").textContent = "Copied"; setTimeout(function(){ $("copy").textContent = "Copy results"; }, 1500); }, function(){ $("copy").textContent = "Copy blocked"; }); };
+function scrubR(t){ return String(t == null ? "" : t).replace(/(AIza|sk-ant-|sk-)[\w-]{6,}/g, "[key removed]").replace(/\b[A-Za-z0-9_~-]{32,}\b/g, "[long code removed]"); }
+function rangeReport(){
+  var ua = navigator.userAgent, br = /Edg\/(\d+)/.exec(ua) ? "Edge " + RegExp.$1 : /Chrome\/(\d+)/.exec(ua) ? "Chrome " + RegExp.$1 : /Version\/(\d+).*Safari/.exec(ua) ? "Safari " + RegExp.$1 : /Firefox\/(\d+)/.exec(ua) ? "Firefox " + RegExp.$1 : "other browser";
+  var L = ["FPLN SECURITY REPORT · test range · v1", "Paste this into Claude in the FPLN project. Fake data only: nothing from your real planner is in it.", ""];
+  L.push("App: " + ((VERSION && VERSION.version) || "?") + " | " + br + " | made " + new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC");
+  L.push("Result: " + pass + " passed, " + fail + " failed, " + blocked + " attacks stopped");
+  var bad = RES.filter(function(x){ return !x.ok; });
+  L.push(""); L.push("Failed (" + bad.length + "):"); bad.forEach(function(x){ L.push("  " + x.s + " " + scrubR(x.name) + (x.detail ? " · " + scrubR(x.detail).slice(0, 240) : "")); }); if(!bad.length) L.push("  none");
+  L.push(""); L.push("All checks:"); RES.forEach(function(x){ L.push("  " + (x.ok ? "PASS " : "FAIL ") + x.s + " " + scrubR(x.name)); });
+  return L.join("\n");
+}
+$("copy").onclick = function(){ var t = rangeReport();
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ $("copy").textContent = "Copied"; setTimeout(function(){ $("copy").textContent = "Copy report"; }, 1500); }, function(){ $("copy").textContent = "Copy blocked"; }); };
 loadApp().then(function(){ now("Ready.", "Press Run all, or run one scenario from the list. Watch slows each step down so you can see it; Fast runs at full speed."); sigSet(ctl("none"), ver("none")); }, function(e){ now("CAN'T LOAD FPLN", e.message); });
 fit();
 if(/[?&]autorun=1/.test(location.search)){ if(/[?&]fast=1/.test(location.search)){ speed = "fast"; } setTimeout(function(){ $("runAll").click(); }, 800); }

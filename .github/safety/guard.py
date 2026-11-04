@@ -54,7 +54,7 @@ ALLOW_PHONES = {"315-774-8200","315-774-8300","845-446-4731","845-446-5446","845
                 "845-938-3590","845-938-4159","845-938-5125","845-957-7895","845-938-4456","845-938-4041","800-275-8777"}
 ALLOW_EMAIL = re.compile(r"@(?:users\.noreply\.github\.com)$|^noreply@anthropic\.com$")
 # Where the app may connect. DATA = can carry what a cadet types (only with their own key/consent).
-HOSTS_DATA = {"api.anthropic.com","generativelanguage.googleapis.com","docs.google.com","api.open-meteo.com"}
+HOSTS_DATA = {"api.anthropic.com","generativelanguage.googleapis.com","docs.google.com","api.open-meteo.com","huggingface.co","hf.co"}
 HOSTS_LIBS = {"cdn.sheetjs.com","fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net","cdnjs.cloudflare.com","unpkg.com","esm.run","huggingface.co","raw.githubusercontent.com"}
 # Addresses only the safety tooling under .github/ may use (vulnerability databases), never the app.
 HOSTS_CI = {"api.osv.dev","www.cisa.gov"}

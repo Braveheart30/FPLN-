@@ -1,0 +1,69 @@
+name: FPLN auto-secure
+# Layer 11 (auto-secure, fleet side). Every 6 hours: runs the threat watch and the adversary tier. Any attack that
+# fails is run a second time; only a failure that repeats counts. A confirmed failure switches off just the one
+# feature it maps to (Eric, Canvas, file readers or Feedback) on every device, and the feature comes back by itself
+# once its tests pass again. An actively exploited browser bug adds a warning banner for 14 days.
+# It never pauses or erases FPLN, never replaces the owner's banner, and never undoes a switch the owner set by hand.
+# Owner: turn it off with FPLN control > autosecure-off (or the Command Center AUTO page).
+on:
+  schedule:
+    - cron: "41 */6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  issues: write
+concurrency:
+  group: fpln-control
+  cancel-in-progress: false
+jobs:
+  autosecure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install browser
+        run: |
+          pip install playwright==1.48.0
+          python -m playwright install --with-deps chromium
+      - name: Threat watch
+        run: python .github/safety/threatwatch.py --root . --out threatwatch.json || true
+      - name: Adversary tier
+        run: python .github/safety/adversary.py --root . --out adversary.json || true
+      - name: Re-run failures to confirm
+        run: |
+          FAILED=$(python - <<'PY'
+          import json
+          try: r = json.load(open("adversary.json"))
+          except Exception: r = {"attacks": []}
+          print(",".join(a["id"] for a in r["attacks"] if a["verdict"] in ("BREACHED", "BROKEN")))
+          PY
+          )
+          echo "Failed first time: ${FAILED:-none}"
+          if [ -n "$FAILED" ]; then python .github/safety/adversary.py --root . --only "$FAILED" --out confirm.json || true; fi
+      - name: Decide and apply
+        id: decide
+        run: |
+          C=""; if [ -f confirm.json ]; then C="--confirm confirm.json"; fi
+          python .github/safety/autosecure.py decide --adversary adversary.json --threat threatwatch.json $C --root . --apply --summary decision.md
+          if git diff --quiet -- control.json version.json .github/safety/autosecure.json; then echo "changed=no" >> "$GITHUB_OUTPUT"; else echo "changed=yes" >> "$GITHUB_OUTPUT"; fi
+          cat decision.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish to main and the live site
+        if: steps.decide.outputs.changed == 'yes'
+        run: |
+          git config user.name "FPLN auto-secure"
+          git config user.email "fpln-control@users.noreply.github.com"
+          git add control.json version.json .github/safety/autosecure.json
+          git commit -m "FPLN auto-secure: defenses adjusted"
+          git push origin HEAD:main
+          git push -f origin HEAD:gh-pages
+      - name: Tell the owner
+        if: steps.decide.outputs.changed == 'yes'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue create --title "FPLN auto-secure changed the defenses ($(date -u '+%d %b %H:%M UTC'))" --body-file decision.md || true

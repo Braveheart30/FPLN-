@@ -1,1 +1,1 @@
-{"version": "0.7.5 beta \u00b7 2 Nov 2026", "note": "Safety update: fixes from the adversary tests", "built": "202611021400", "kill": {"state": "none", "id": "R-20261102-043736", "msg": ""}}
+{"version": "0.7.6 beta \u00b7 3 Nov 2026", "note": "Safety update: auto-secure and fixes from the second adversary tier", "built": "202611031100", "kill": {"state": "none", "id": "R-20261102-043736", "msg": ""}}

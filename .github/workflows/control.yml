@@ -6,6 +6,9 @@ name: FPLN control
 #   restore        end a freeze or erase
 #   switches       turn off features (comma list in "off"): eric, feedback, weather, canvas, fonts, libs, links; "none" = all on
 #   banner         show a message at the top of FPLN for everyone; clear-banner removes it
+#   autosecure-on / autosecure-off      let the 6-hourly auto-secure run change defenses, or stop it
+#   device-auto-on / device-auto-off    let each device raise its own guard when it sees an attack, or stop that
+#   device-reset   drop every device's auto-secure level back to normal
 #   shutdown-site  replace the live site with the shutdown page; also erases old FPLN versions (type SHUTDOWN in confirm)
 #   bring-back     put the full app back on the live site and restore it
 on:
@@ -15,7 +18,7 @@ on:
         description: "What to do"
         required: true
         type: choice
-        options: [freeze, erase, restore, switches, banner, clear-banner, shutdown-site, bring-back]
+        options: [freeze, erase, restore, switches, banner, clear-banner, autosecure-on, autosecure-off, device-auto-on, device-auto-off, device-reset, shutdown-site, bring-back]
       message:
         description: "Message cadets see (freeze, erase, banner)"
         required: false
@@ -53,7 +56,7 @@ jobs:
           fetch-depth: 0
       - name: Check confirmation
         run: |
-          if [ -n "$GROUP" ] && { [ "$ACTION" = "shutdown-site" ] || [ "$ACTION" = "bring-back" ]; }; then echo "::error::shutdown-site and bring-back can't target a test group."; exit 1; fi
+          if [ -n "$GROUP" ] && { [ "$ACTION" = "shutdown-site" ] || [ "$ACTION" = "bring-back" ] || [ "${ACTION#autosecure}" != "$ACTION" ] || [ "${ACTION#device-}" != "$ACTION" ]; }; then echo "::error::This action can't target a test group."; exit 1; fi
           if [ "$ACTION" = "erase" ] && [ -z "$GROUP" ] && [ "$CONFIRM" != "ERASE" ]; then echo "::error::Type ERASE in confirm to erase."; exit 1; fi
           if [ "$ACTION" = "shutdown-site" ] && [ "$CONFIRM" != "SHUTDOWN" ]; then echo "::error::Type SHUTDOWN in confirm to replace the site."; exit 1; fi
       - name: Write the signal
@@ -65,6 +68,11 @@ jobs:
             switches) python3 .github/safety/control.py switches --off "$OFF" --by workflow $R ;;
             banner) python3 .github/safety/control.py banner --msg "$MSG" --by workflow $R ;;
             clear-banner) python3 .github/safety/control.py clear-banner --by workflow $R ;;
+            autosecure-on) python3 .github/safety/autosecure.py set --enabled on --root . ;;
+            autosecure-off) python3 .github/safety/autosecure.py set --enabled off --root . ;;
+            device-auto-on) python3 .github/safety/autosecure.py set --device on --root . ;;
+            device-auto-off) python3 .github/safety/autosecure.py set --device off --root . ;;
+            device-reset) python3 .github/safety/autosecure.py set --reset-devices --root . ;;
             shutdown-site) python3 .github/safety/control.py erase --msg "$MSG" --by workflow ;;
           esac
           python3 .github/safety/control.py status
@@ -72,7 +80,7 @@ jobs:
         run: |
           git config user.name "FPLN control"
           git config user.email "fpln-control@users.noreply.github.com"
-          git add control.json version.json
+          git add control.json version.json .github/safety/autosecure.json
           git commit -m "FPLN control: $ACTION" || echo "Signal unchanged"
           git push origin HEAD:main
           if [ "$ACTION" = "shutdown-site" ]; then
