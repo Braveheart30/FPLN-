@@ -20,9 +20,9 @@ import argparse, functools, http.server, json, os, re, shutil, socketserver, sub
 
 # Waiting must keep the browser automation running: a plain sleep pauses Playwright's request interception, so a
 # request the app (or an attack) makes during the wait would sit unanswered and unrecorded until the next call.
-PAGES = []
+LIVE_PAGES = []
 def nap(s):
-    for p in reversed(PAGES):
+    for p in reversed(LIVE_PAGES):
         try:
             if not p.is_closed(): p.wait_for_timeout(int(s * 1000)); return
         except Exception: pass
@@ -124,7 +124,7 @@ SCEN = []
 
 def new_ctx(b, csp_log=True):
     ctx = b.new_context()
-    ctx.on("page", lambda p: PAGES.append(p))
+    ctx.on("page", lambda p: LIVE_PAGES.append(p))
     ctx.route("https://braveheart30.github.io/FPLN-/*", lambda rt: rt.fulfill(path=os.path.join(SITE, rt.request.url.split("/FPLN-/")[1].split("?")[0].split("#")[0])) if os.path.exists(os.path.join(SITE, rt.request.url.split("/FPLN-/")[1].split("?")[0].split("#")[0])) else rt.fulfill(status=404, body="missing"))
     if csp_log: ctx.add_init_script("window.__csp=[];document.addEventListener('securitypolicyviolation',e=>window.__csp.push(e.blockedURI||''));")
     return ctx

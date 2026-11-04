@@ -6,6 +6,9 @@ name: FPLN auto-secure
 # It never pauses or erases FPLN, never replaces the owner's banner, and never undoes a switch the owner set by hand.
 # Owner: turn it off with FPLN control > autosecure-off (or the Command Center AUTO page).
 on:
+  push:
+    branches: [main]
+    paths: ["index.html", "sw.js", "range/**", "vendor/**", ".github/safety/**", "!.github/safety/autosecure.json"]
   schedule:
     - cron: "41 */6 * * *"
   workflow_dispatch:

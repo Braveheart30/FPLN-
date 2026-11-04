@@ -445,7 +445,7 @@
     L.push("FPLN SECURITY REPORT · device · v1");
     L.push("Paste this into Claude in the FPLN project. It holds names, counts and web addresses only: no planner text, keys or tokens.");
     L.push("");
-    L.push("App: " + (W.FPLN_VERSION || "?") + " | " + br + " on " + os + " | made " + new Date(now).toISOString().slice(0, 16).replace("T", " ") + " UTC");
+    L.push("App: " + (W.FPLN_VERSION || (function(){ try{ for(var i = 0; i < W.frames.length; i++){ var v = W.frames[i].FPLN_VERSION; if(v) return v; } }catch(e){} return ""; })() || "?") + " | " + br + " on " + os + " | made " + new Date(now).toISOString().slice(0, 16).replace("T", " ") + " UTC");
     L.push("Signal: " + (locked ? lock.state : "none") + " | last checked " + (lastOk ? Math.round((now - lastOk) / 1000) + " s ago" : "never") + " | switched off: " + ((ctl.off || []).join(", ") || "nothing") + " | test group: " + (ring ? "yes" : "no"));
     L.push("Background worker: " + (sw ? (/\/FPLN-\/sw\.js/.test(sw.scriptURL) ? "FPLN's own" : "FOREIGN " + scrub(sw.scriptURL).slice(0, 80)) : "not running") + " | framed by another site: " + (framedBy ? "yes" : "no"));
     L.push("Auto-secure: " + AUTO_NAMES[AUTO.lv] + (AUTO.lv ? " since " + new Date(AUTO.since).toISOString().slice(11, 16) + " UTC (" + scrub(AUTO.why || "") + ")" : "") + " | device auto-secure " + (autoOn() ? "on" : "off by the FPLN team"));
@@ -1733,7 +1733,7 @@ var DISP = (function(){
 DISP.apply();
 
 /* ================= Feedback: straight to the developer's Google Form, anonymous by default ================= */
-var FPLN_VERSION = "0.7.7 beta \u00b7 3 Nov 2026";
+var FPLN_VERSION = "0.7.7 beta \u00b7 4 Nov 2026";
 var FB = (function(){
   var FORM = "https://docs.google.com/forms/d/e/1FAIpQLSf2YdE91QlvrLtVRfqKF-KoC-do04QxvXyvM3vY6dF4BQavlw/";
   var F_MSG = "entry.1832434695", F_NAME = "entry.1191502103", QKEY = "fpln:fbq";

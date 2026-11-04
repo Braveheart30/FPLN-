@@ -16,9 +16,9 @@ import argparse, base64, functools, http.server, json, os, re, shutil, socketser
 
 # Waiting must keep the browser automation running: a plain sleep pauses Playwright's request interception, so a
 # request the app (or an attack) makes during the wait would sit unanswered and unrecorded until the next call.
-PAGES = []
+LIVE_PAGES = []
 def nap(s):
-    for p in reversed(PAGES):
+    for p in reversed(LIVE_PAGES):
         try:
             if not p.is_closed(): p.wait_for_timeout(int(s * 1000)); return
         except Exception: pass
@@ -146,7 +146,7 @@ SCEN = []
 
 def new_ctx(b, sw=True, clipboard=False):
     ctx = b.new_context(service_workers="allow" if sw else "block")
-    ctx.on("page", lambda p: PAGES.append(p))
+    ctx.on("page", lambda p: LIVE_PAGES.append(p))
     if clipboard: ctx.grant_permissions(["clipboard-read", "clipboard-write"], origin="http://localhost:%d" % PORT)
     ctx.add_init_script("window.__hRawSet_q7 = Storage.prototype.setItem; window.__hRawLS_q7 = window.localStorage;")
     ctx.route(re.compile(r"^https://braveheart30\.github\.io/FPLN-/.*"), lambda rt: rt.fulfill(path=os.path.join(SITE, rt.request.url.split("/FPLN-/")[1].split("?")[0].split("#")[0] or "index.html")) if os.path.exists(os.path.join(SITE, rt.request.url.split("/FPLN-/")[1].split("?")[0].split("#")[0] or "index.html")) else rt.fulfill(status=404, body=""))
