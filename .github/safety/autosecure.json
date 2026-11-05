@@ -53,9 +53,17 @@
     {
       "at": "2026-11-05T08:07:45+00:00",
       "what": "reported only (no feature to switch off): P2"
+    },
+    {
+      "at": "2026-11-05T14:06:24+00:00",
+      "what": "reported only (no feature to switch off): P1"
+    },
+    {
+      "at": "2026-11-05T14:06:24+00:00",
+      "what": "reported only (no feature to switch off): P2"
     }
   ],
-  "checked": "2026-11-05T08:07:45+00:00",
+  "checked": "2026-11-05T14:06:24+00:00",
   "last": {
     "failures": {},
     "advisory": [],
