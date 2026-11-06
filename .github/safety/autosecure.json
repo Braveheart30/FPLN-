@@ -79,13 +79,10 @@
       "what": "reported only (no feature to switch off): P2"
     }
   ],
-  "checked": "2026-11-06T02:01:58+00:00",
+  "checked": "2026-11-06T03:01:04+00:00",
   "last": {
     "failures": {},
     "advisory": [],
-    "unmapped": [
-      "P1",
-      "P2"
-    ]
+    "unmapped": []
   }
 }
