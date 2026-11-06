@@ -77,12 +77,23 @@
     {
       "at": "2026-11-06T02:01:58+00:00",
       "what": "reported only (no feature to switch off): P2"
+    },
+    {
+      "at": "2026-11-06T03:17:42+00:00",
+      "what": "reported only (no feature to switch off): P1"
+    },
+    {
+      "at": "2026-11-06T03:17:42+00:00",
+      "what": "reported only (no feature to switch off): P2"
     }
   ],
-  "checked": "2026-11-06T03:01:04+00:00",
+  "checked": "2026-11-06T03:17:42+00:00",
   "last": {
     "failures": {},
     "advisory": [],
-    "unmapped": []
+    "unmapped": [
+      "P1",
+      "P2"
+    ]
   }
 }
