@@ -123,6 +123,16 @@ def decide(st, ctl, fails, advis, unm):
     for u in unm: ev.append({"at": iso(t), "what": "reported only (no feature to switch off): " + u})
     return st, new_off, bn, ev
 
+def details(adv, conf):
+    """what each failing attack or check found, so the issue explains itself (names and addresses only, no secrets)"""
+    out = []
+    for run, r in (("first run", adv), ("re-run", conf)):
+        for a in (r or {}).get("attacks", []):
+            if a.get("verdict") in ("BREACHED", "BROKEN", "ERROR"):
+                out.append("\n**%s %s** (%s, %s)\n" % (a["id"], a.get("name", ""), a["verdict"], run))
+                out += ["- %s" % str(x)[:240] for x in (a.get("findings") or [])[:5] + (a.get("notes") or [])[:8]]
+    return ("\n#### Details\n" + "\n".join(out) + "\n") if out else ""
+
 def cmd_decide(A):
     root = os.path.abspath(A.root); sp = os.path.join(HERE, "autosecure.json")
     st = load(sp, DEFAULT); ctl = load(os.path.join(root, "control.json"), {})
@@ -131,6 +141,16 @@ def cmd_decide(A):
     fails = failures(adv, tw, conf); advis = browser_advisory(tw); unm = unmapped(adv)
     st2, new_off, bn, ev = decide(st, ctl, fails, advis, unm)
     print(json.dumps({"failures": fails, "advisory": advis, "unmapped": unm, "switch_off": new_off, "banner": bn, "events": ev}, indent=1))
+    # a failure with no feature to switch off is noted once, not on every run (repeats made a commit and an issue every 6 hours)
+    prev = set(((st.get("last") or {}).get("unmapped")) or [])
+    ev = [e for e in ev if not (e["what"].startswith("reported only") and e["what"].split(": ")[-1] in prev)]
+    new_last = {"failures": fails, "advisory": advis, "unmapped": unm}
+    material = new_off is not None or bool(bn) or bool(ev) or new_last != (st.get("last") or {})
+    if A.apply and not material:
+        print("auto-secure: nothing changed; state file left as is")
+        if A.summary:
+            with open(A.summary, "w") as f: f.write("### FPLN auto-secure\n\nNothing changed this run.\n" + details(adv, conf))
+        return 0
     if A.apply:
         if new_off is not None:
             code, out = control(root, "switches", "--off", ",".join(new_off) or "none"); print(out)
@@ -145,6 +165,7 @@ def cmd_decide(A):
                 f.write("### FPLN auto-secure\n\n")
                 f.write("Auto-secure is **%s**. Switched off by auto-secure: %s\n\n" % ("on" if st2["enabled"] else "off", ", ".join(NAMES.get(k, k) for k in st2["applied"]) or "nothing"))
                 for e in ev: f.write("- %s\n" % e["what"])
+                f.write(details(adv, conf))
     return 0
 
 def cmd_set(A):

@@ -127,6 +127,34 @@ with sync_playwright() as p:
     check(G, "Banner shown", shown)
     sig("switches", "--off", "none"); sig("clear-banner"); nudge(page)
 
+    G = "Uniform"
+    home = lambda: [f for f in page.frames if f.evaluate("() => !!document.getElementById('uodBlurb')")][0]
+    day = page.evaluate("(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })()")
+    sig("uod", "--date", day, "--text", "ACU under Level 5 with black gloves"); nudge(page, False)
+    got = ""
+    for _ in range(15):
+        try: got = home().evaluate("() => document.getElementById('uodBlurb').textContent + ' | ' + document.getElementById('uodSrc').textContent + ' | ' + [...document.querySelectorAll('[data-slot]')].map(b => b.textContent).join(',')")
+        except Exception: got = ""
+        if "Level 5" in got and "command" in got.lower(): break
+        page.evaluate("dispatchEvent(new Event('online'))"); time.sleep(1)
+    check(G, "Posted uniform reaches the cadet", "ACU under Level 5 with black gloves" in got and "command" in got.lower(), got[:110])
+    check(G, "Cadet wears the posted gear", "Level 5" in got.split("|")[-1] and "Black gloves" in got.split("|")[-1], got.split("|")[-1][:110])
+    sig("uod", "--date", day, "--k", "acu", "--text", "<img src=x onerror=alert(1)>ACU <b>bold</b>"); nudge(page, False)
+    for _ in range(15):
+        try: got = home().evaluate("() => document.getElementById('uodBlurb').textContent")
+        except Exception: got = ""
+        if "bold" in got: break
+        page.evaluate("dispatchEvent(new Event('online'))"); time.sleep(1)
+    imgs = home().evaluate("() => document.querySelectorAll('.uod img').length + document.getElementById('uodBlurb').children.length + document.getElementById('uodSrc').querySelectorAll('img').length")
+    check(G, "Uniform text can't carry markup", "bold" in got and "<" not in got and imgs == 0, got[:80])
+    sig("clear-uod", "--date", day); nudge(page, False)
+    for _ in range(15):
+        try: hid = home().evaluate("() => document.getElementById('uodSrc').hidden")
+        except Exception: hid = False
+        if hid: break
+        page.evaluate("dispatchEvent(new Event('online'))"); time.sleep(1)
+    check(G, "Removing the uniform takes it off", hid)
+
     G = "Test group"
     token = "bit-" + hashlib.sha256(str(time.time()).encode()).hexdigest()[:28]
     h = hashlib.sha256(token.encode()).hexdigest()[:24]

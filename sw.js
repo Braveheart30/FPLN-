@@ -3,7 +3,7 @@
    every request to another site at the network layer, even if the page's own code fails.
    It also enforces the service pins (AI only with the cadet's own key, Canvas only the cadet's school, read-only,
    everything else download-only) and follows the page's auto-secure level, independently of the page's own code. */
-const CACHE = 'fpln-202611040400';
+const CACHE = 'fpln-202611052200';
 const CTL = 'fpln-ctl';
 const CORE = ['./', './index.html', './manifest.webmanifest', './favicon.ico', './icons/icon-32.png', './icons/icon-64.png', './icons/icon-192.png', './icons/icon-512.png'];
 const FEAT = {

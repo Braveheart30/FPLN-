@@ -6,6 +6,8 @@ name: FPLN control
 #   restore        end a freeze or erase
 #   switches       turn off features (comma list in "off"): eric, feedback, weather, canvas, fonts, libs, links; "none" = all on
 #   banner         show a message at the top of FPLN for everyone; clear-banner removes it
+#   uod            post the uniform of the day: put it in message, e.g. "ACU under Level 5 with black gloves" (date optional)
+#   clear-uod      remove that day's posted uniform
 #   autosecure-on / autosecure-off      let the 6-hourly auto-secure run change defenses, or stop it
 #   device-auto-on / device-auto-off    let each device raise its own guard when it sees an attack, or stop that
 #   device-reset   drop every device's auto-secure level back to normal
@@ -18,13 +20,17 @@ on:
         description: "What to do"
         required: true
         type: choice
-        options: [freeze, erase, restore, switches, banner, clear-banner, autosecure-on, autosecure-off, device-auto-on, device-auto-off, device-reset, shutdown-site, bring-back]
+        options: [freeze, erase, restore, switches, banner, clear-banner, uod, clear-uod, autosecure-on, autosecure-off, device-auto-on, device-auto-off, device-reset, shutdown-site, bring-back]
       message:
-        description: "Message cadets see (freeze, erase, banner)"
+        description: "Message cadets see (freeze, erase, banner), or the uniform for uod"
         required: false
         default: ""
       off:
         description: "switches only: features to turn off, comma separated, or none"
+        required: false
+        default: ""
+      date:
+        description: "uod and clear-uod only: day as YYYY-MM-DD (blank = today, New York)"
         required: false
         default: ""
       group:
@@ -49,6 +55,7 @@ jobs:
       OFF: ${{ inputs.off }}
       CONFIRM: ${{ inputs.confirm }}
       GROUP: ${{ inputs.group }}
+      UDATE: ${{ inputs.date }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -64,6 +71,8 @@ jobs:
           R=""; if [ -n "$GROUP" ]; then R="--ring $GROUP"; fi
           case "$ACTION" in
             freeze|erase) python3 .github/safety/control.py "$ACTION" --msg "$MSG" --by workflow $R ;;
+            uod) python3 .github/safety/control.py uod --text "$MSG" ${UDATE:+--date "$UDATE"} --by workflow $R ;;
+            clear-uod) python3 .github/safety/control.py clear-uod ${UDATE:+--date "$UDATE"} --by workflow $R ;;
             restore|bring-back) python3 .github/safety/control.py restore --by workflow $R ;;
             switches) python3 .github/safety/control.py switches --off "$OFF" --by workflow $R ;;
             banner) python3 .github/safety/control.py banner --msg "$MSG" --by workflow $R ;;

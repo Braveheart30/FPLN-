@@ -815,7 +815,7 @@ def p1(b, r):
     f = reveal(pg, "#erGemKey")
     if not f: r["verdict"] = "BROKEN"; r["findings"].append("couldn't find the Gemini key field"); ctx.close(); return
     f.fill("#erGemKey", NEW, timeout=8000); f.evaluate("() => document.getElementById('erGemSave').click()")
-    for _ in range(20):   # Save and test takes a moment: wait for Google's answer, up to 10 s
+    for _ in range(40):   # Save and test takes a moment: wait for Google's answer, up to 20 s on a slow machine
         nap(0.5); stored = f.evaluate("() => localStorage.getItem('fpln:eric:gemini')")
         if stored == NEW or not f.evaluate("() => /Testing/.test((document.getElementById('erGemMsg') || {}).textContent || '')"): break
     nap(0.3); stored = f.evaluate("() => localStorage.getItem('fpln:eric:gemini')")
@@ -823,7 +823,7 @@ def p1(b, r):
     checked = any(n["key"] == NEW for n in NET[n0:])
     msg = f.evaluate("() => (document.getElementById('erGemMsg') || {}).textContent || ''")
     eric_say(pg, "What should I focus on for my WPR prep this week?")
-    for _ in range(24):
+    for _ in range(50):
         nap(0.5); used = any(n["key"] == NEW and n["host"] == "generativelanguage.googleapis.com" and "generateContent" in n["url"] for n in NET[n0:])
         if used: break
     r["notes"].append("key test reached Google: %s · saved: %s · message: %s · Eric used it: %s" % (checked, stored == NEW, msg[:60], used))
@@ -840,7 +840,7 @@ def p2(b, r):
     f.fill("#cvKey", NEW); f.evaluate("() => document.getElementById('cvSave').click()"); nap(1)
     tok = f.evaluate("() => { try { return JSON.parse(localStorage.getItem('fpln:canvas') || '{}').token || ''; } catch (e) { return ''; } }")
     f.evaluate("() => document.getElementById('cvSync').click()")
-    for _ in range(16):
+    for _ in range(40):
         nap(0.5)
         if any(n.get("auth") == NEW for n in NET[n0:]): break
     sent = [n["host"] for n in NET[n0:] if n.get("auth") == NEW]

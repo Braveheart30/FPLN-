@@ -12,6 +12,10 @@ Usage (run from the repo root):
   control.py switches --off a,b        switch off features: eric, feedback, weather, canvas, fonts, libs, links ("none" = all on)
   control.py banner   --msg TEXT [--level info|warn]
   control.py clear-banner
+  control.py uod --text "ACU under Level 5 with black gloves" [--date YYYY-MM-DD] [--k acu --sel OUTER=ecwcs,HANDS=gloves]
+                                       post the uniform of the day (default today, New York); without --k the words are read by
+                                       uodparse.js, the same reader the app and the Command Center use
+  control.py clear-uod [--date YYYY-MM-DD]
   control.py status                    print the current signal
 
 Add --ring HASH to any of these to address only the devices in one test group (the 24-character
@@ -19,12 +23,16 @@ group code from the Command Center). Group orders live in control.json under "ri
 them exactly as it obeys everyone-orders, so it can't tell a drill from the real thing.
 restore --ring HASH removes that group's orders.
 """
-import re
+import re, subprocess
 import argparse, json, os, sys, datetime
 
 FEATURES = ["eric", "feedback", "weather", "canvas", "fonts", "libs", "links"]
 ap = argparse.ArgumentParser()
-ap.add_argument("action", choices=["freeze", "erase", "restore", "switches", "banner", "clear-banner", "status"])
+ap.add_argument("action", choices=["freeze", "erase", "restore", "switches", "banner", "clear-banner", "uod", "clear-uod", "status"])
+ap.add_argument("--text", default="")
+ap.add_argument("--date", default="")
+ap.add_argument("--k", default="")
+ap.add_argument("--sel", default="")
 ap.add_argument("--msg", default="")
 ap.add_argument("--off", default="")
 ap.add_argument("--level", default="info", choices=["info", "warn"])
@@ -52,6 +60,52 @@ ctl = load(C, {"v": 1, "kill": {"state": "none", "id": "", "msg": ""}, "off": []
 ver = load(V, None)
 if ver is None:
     sys.exit("version.json is missing or unreadable: fix it before changing the signal")
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+def node(*args):
+    r = subprocess.run(["node", os.path.join(HERE, "uodparse.js")] + list(args), capture_output=True, text=True, timeout=20)
+    return json.loads(r.stdout or "{}")
+def uod_date():
+    if A.date:
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", A.date): sys.exit("--date must be YYYY-MM-DD")
+        return A.date
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+    except Exception:
+        return (now - datetime.timedelta(hours=5)).strftime("%Y-%m-%d")
+def uod_order():
+    """the order to post: uniform key, gear per slot and the line cadets read; everything checked against the app's catalog"""
+    cat = json.loads(subprocess.run(["node", "-e", "process.stdout.write(JSON.stringify(require(process.argv[1]).CATALOG))", os.path.join(HERE, "uodparse.js")],
+                                    capture_output=True, text=True, timeout=20).stdout)
+    text = clean(A.text, 200)
+    if A.k:
+        k = A.k.strip().lower(); sel = {}
+        for pair in [x for x in A.sel.split(",") if x.strip()]:
+            sep = "=" if "=" in pair else ":" if ":" in pair else None
+            if not sep: sys.exit("--sel takes SLOT=gear pairs, e.g. OUTER=ecwcs,HANDS=gloves")
+            sl, v = [x.strip() for x in pair.split(sep, 1)]; sel[sl.upper()] = v.lower()
+    else:
+        if not text: sys.exit("--text is required for uod (or give --k and --sel)")
+        r = node(text); k, sel = r.get("k", ""), r.get("sel", {})
+        if not k: sys.exit("No uniform found in: %r. Start with ACU, As for Class, White over Gray, Dress Gray, Full Dress or APFU." % text)
+        if not r.get("unknown"): text = r.get("text") or text
+    if k not in cat: sys.exit("Unknown uniform %r. Use: %s" % (k, ", ".join(cat)))
+    for sl, v in sel.items():
+        if sl not in cat[k] or v not in cat[k][sl]: sys.exit("%s has no %s choice %r. Choices: %s" % (k, sl, v, ", ".join(cat[k].get(sl, [])) or "none"))
+    return {"id": "U-" + stamp, "k": k, "sel": sel, "text": re.sub(r"[<>\x00-\x1f]", " ", text)[:200], "at": A.at or int(now.timestamp() * 1000), "by": clean(A.by, 20)}
+def uod_apply(holder):
+    """post or clear one day; keeps at most 10 days and drops days before yesterday. Returns False if a newer order for that day is live."""
+    d = uod_date(); m = holder.get("uod") if isinstance(holder.get("uod"), dict) else {}
+    if A.at and isinstance(m.get(d), dict) and int(m[d].get("at") or 0) > A.at:
+        print("Refused: a newer uniform order for %s is already live." % d); return False
+    if A.action == "uod": m[d] = uod_order()
+    else: m.pop(d, None)
+    floor = (datetime.date.fromisoformat(uod_date() if not A.date else d) - datetime.timedelta(days=1)).isoformat() if A.action == "uod" else "0000-00-00"
+    m = {x: m[x] for x in sorted(m)[-10:] if x >= min(floor, d)}
+    if m: holder["uod"] = m
+    else: holder.pop("uod", None)
+    print("FPLN uniform %s: %s" % (d, m[d]["text"] if d in m else "cleared")); return True
 
 if A.action == "status":
     print(json.dumps({"control": ctl, "version_kill": ver.get("kill")}, indent=2)); sys.exit(0)
@@ -85,7 +139,9 @@ if RING and A.action != "status":
         if not A.msg.strip(): sys.exit("--msg is required for a banner")
         g["banner"] = {"id": "B-" + stamp, "text": clean(A.msg, 300), "level": A.level}
     elif A.action == "clear-banner": g["banner"] = None
-    if g["kill"]["state"] == "none" and not g["off"] and not g.get("banner") and not A.at: rings.pop(RING, None)
+    elif A.action in ("uod", "clear-uod"):
+        if not uod_apply(g): sys.exit(3)
+    if g["kill"]["state"] == "none" and not g["off"] and not g.get("banner") and not g.get("uod") and not A.at: rings.pop(RING, None)
     else: rings[RING] = g
     ctl["rings"] = rings
     ctl["rev"] = "group-" + A.action + "-" + stamp
@@ -114,6 +170,8 @@ elif A.action == "banner":
     ctl["banner"] = {"id": "B-" + stamp, "text": clean(A.msg, 300), "level": A.level}
 elif A.action == "clear-banner":
     ctl["banner"] = None
+elif A.action in ("uod", "clear-uod"):
+    if not uod_apply(ctl): sys.exit(3)
 
 ctl["v"] = 1
 ctl["rev"] = A.action + "-" + stamp
