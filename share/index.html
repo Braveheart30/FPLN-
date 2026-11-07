@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Share FPLN · Flight Plan (beta)</title>
 <meta name="description" content="Badges, a QR code and a ready-to-send link for FPLN, the Flight Plan app for USMA cadets.">
-<meta property="og:type" content="website"><meta property="og:title" content="FPLN · Your day, cleared for takeoff."><meta property="og:description" content="Install the FPLN beta in one click.">
+<meta property="og:type" content="website"><meta property="og:title" content="FPLN · Your day, cleared for takeoff."><meta property="og:description" content="Never miss a formation again. Minute calls that count you down, an alarm that actually gets you up, every assignment in one list and a post map that knows what’s open. Built by a cadet, for the Corps.">
 <meta property="og:url" content="https://braveheart30.github.io/FPLN-/download/"><meta property="og:image" content="https://braveheart30.github.io/FPLN-/share/og.png">
 <meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#060b14"><link rel="icon" href="../favicon.ico">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap">
@@ -61,9 +61,9 @@ code{display:block;font:12.5px/1.5 ui-monospace,monospace;background:rgba(0,0,0,
 
 <p class="kick">Share kit</p>
 <h1>Send FPLN to your classmates</h1>
-<p class="lead">One link, a badge for emails and docs, and a QR code for formation. Everything opens the one-click install page.</p>
+<p class="lead">Know someone who’s always one minute late? Send them FPLN. One link, a badge for emails and a QR code for formation, and every one of them opens the one-click install.</p>
 
-<div class="chip"><img src="../icons/icon-192.png" alt=""><a id="lnk" href="../get/"><span>braveheart30.github.io/</span><b>FPLN-/get</b></a><button type="button" class="btn pri" data-copy="link"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M16 5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>Copy link</button></div>
+<div class="chip"><img src="../icons/icon-192.png" alt=""><a id="lnk" href="../get/"><b>Get FPLN</b> <span>· one-click install link</span></a><button type="button" class="btn pri" data-copy="link"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M16 5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>Copy link</button></div>
 <div class="row"><button type="button" class="btn gh" id="shr" hidden>Share…</button><button type="button" class="btn gh" data-copy="msg">Copy a ready-made message</button></div>
 
 <section><h2>Badges</h2><p class="sub">“Copy for email” copies the badge as a clickable picture: paste it into Gmail, Outlook, Teams or a Google Doc.</p>
@@ -76,18 +76,20 @@ code{display:block;font:12.5px/1.5 ui-monospace,monospace;background:rgba(0,0,0,
 
 <section><h2>QR code</h2><p class="sub">For a slide, a whiteboard or your phone screen at formation. Tap it to show it full screen.</p>
 <div class="card qr"><img src="qr.png" alt="QR code that opens the FPLN install page" id="qrImg" width="920" height="1178">
-  <div><p style="margin:0 0 6px;color:#c3d1de">Point a phone camera at it. It opens <b style="color:#fff;font-weight:600">braveheart30.github.io/FPLN-/download</b>, which shows the right install steps for that phone.</p>
+  <div><p style="margin:0 0 6px;color:#c3d1de">Point a phone camera at it. It opens the FPLN install page, which shows the right install steps for that phone.</p>
   <div class="row"><a class="btn gh" href="qr.png" download="FPLN-QR.png">Download QR</a><button type="button" class="btn gh" id="qrBig">Show full screen</button></div></div></div></section>
 
 <section class="og"><h2>Link preview</h2><p class="sub">What people see when you paste the link into iMessage, GroupMe, Teams, Discord or Slack.</p>
-<div class="card"><img src="og.png" alt="Link preview: FPLN, Your day, cleared for takeoff. Install in one click." width="1200" height="630"><div class="meta"><b>FPLN · Your day, cleared for takeoff.</b>Minute calls, a wake-up alarm, tasks and Canvas, OPORDs and a post map with real hours. Install the beta in one click.</div></div></section>
+<div class="card"><img src="og.png" alt="Link preview: FPLN, Your day, cleared for takeoff. Install in one click." width="1200" height="630"><div class="meta"><b>FPLN · Your day, cleared for takeoff.</b>Never miss a formation again. Minute calls that count you down, an alarm that actually gets you up, every assignment in one list and a post map that knows what’s open. Built by a cadet, for the Corps.</div></div></section>
 
 <section><h2>Ready-made message</h2>
-<pre class="msg" id="msgT">I'm testing FPLN (Flight Plan), a planner built for cadets: minute calls, a wake-up alarm, tasks and Canvas, and a post map with hours.
+<pre class="msg" id="msgT">Stop running late to formation. ✈️
+
+FPLN (Flight Plan) is a planner built by a cadet, for the Corps. It counts down your minute calls, wakes you up with an alarm that actually works, keeps every assignment and Canvas deadline in one list, and knows what’s open on post right now.
 
 Install it in one click: https://braveheart30.github.io/FPLN-/get
 
-It updates by itself and your data stays on your own device. Keep CUI out of it. Use the Feedback button in the app for anything weird.</pre></section>
+Free, updates itself, and everything stays on your own device. I’m beta testing it, so hit the Feedback button with anything you want changed. (Keep CUI out of it.)</pre></section>
 </div>
 <div id="big"><img src="qr.png" alt="QR code that opens the FPLN install page"></div>
 <div id="toast" role="status" aria-live="polite"></div>
