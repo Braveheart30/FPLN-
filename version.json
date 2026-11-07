@@ -1,1 +1,10 @@
-{"version": "0.8 beta 1 \u00b7 6 Nov 2026", "note": "Beta 1: everything in one app, with the new launch screen", "built": "202611061030", "kill": {"state": "none", "id": "R-20261102-043736", "msg": ""}}
+{
+ "version": "0.8.1 beta 1 · 7 Nov 2026",
+ "note": "one-click install and a pre-flight setup on first launch",
+ "built": "202611070000",
+ "kill": {
+  "state": "none",
+  "id": "R-20261102-043736",
+  "msg": ""
+ }
+}

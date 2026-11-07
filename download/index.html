@@ -1,35 +1,192 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; form-action 'none'; object-src 'none'; base-uri 'self'"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Download FPLN (beta)</title><link rel="icon" href="../favicon.ico"><meta name="theme-color" content="#070a0f">
-<meta name="description" content="Download FPLN, the Flight Plan app for USMA cadets. Beta.">
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-src 'none'; form-action 'none'; object-src 'none'; base-uri 'self'">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Get FPLN · Flight Plan (beta)</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../favicon.ico"><link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="theme-color" content="#060b14"><meta name="description" content="Install FPLN, the Flight Plan app for USMA cadets: minute calls, wake-up alarm, tasks and Canvas, OPORDs and a post map with hours. One click, updates itself. Beta.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap">
 <style>
-:root{--bg:#070a0f;--panel:#0f1620;--line:#22303f;--fg:#e8f4fa;--dim:#8aa3b3;--gold:#e2bd74;--cy:#3ef0ff}
-*{box-sizing:border-box}html,body{margin:0}body{min-height:100vh;background:radial-gradient(120% 80% at 20% 0%,#16223a 0%,var(--bg) 60%);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Inter,sans-serif;display:flex;justify-content:center;padding:40px 16px}
-main{width:100%;max-width:640px;display:flex;flex-direction:column;gap:22px}
-.hero{display:flex;gap:20px;align-items:center}.hero img{width:96px;height:96px;border-radius:22px;box-shadow:0 14px 40px -14px #000}
-h1{margin:0;font-size:30px;letter-spacing:.02em}h1 span{font-size:13px;vertical-align:middle;margin-left:8px;padding:3px 9px;border-radius:999px;background:var(--cy);color:#04121a;font-weight:800;letter-spacing:.1em}
-.sub{color:var(--dim);margin:4px 0 0}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
-.btn{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border-radius:12px;font-weight:700;text-decoration:none;font-size:16px}
-.pri{background:linear-gradient(180deg,#f3d699,#c99c4f);color:#120d04}.sec{border:1px solid var(--cy);color:var(--cy)}
-.row{display:flex;gap:12px;flex-wrap:wrap}
-ol{margin:10px 0 0;padding-left:22px}li{margin:6px 0}b{color:var(--gold)}
-small,.note{color:var(--dim);font-size:13.5px}
-</style></head><body><main>
-<div class="hero"><img src="../icons/icon-192.png" alt=""><div><h1>FPLN <span>BETA 1</span></h1><p class="sub">Flight Plan: your day, tasks, OPORDs and a post map with hours, in one place.</p></div></div>
-<div class="card">
-  <h2 style="margin:0 0 6px;font-size:19px">Windows desktop app</h2>
-  <div class="row" style="margin:12px 0 6px">
-    <a class="btn pri" href="FPLN-beta.zip" download>⬇ Download FPLN for Windows</a>
-    <a class="btn sec" href="../">Open FPLN in the browser</a>
+:root{--bg:#060b14;--panel:rgba(14,24,42,.72);--line:rgba(255,255,255,.1);--fg:#eef4fa;--dim:#9fb2c6;--faint:#6f8196;--gold:#e2bd74;--gold2:#f6dca2;--sky:#8fd6ff;--ok:#9fe3b4;
+  --fd:"Chakra Petch","Segoe UI",system-ui,sans-serif;--fb:"Barlow","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}html{scroll-behavior:smooth}html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:400 16px/1.55 var(--fb);overflow-x:hidden}
+a{color:var(--sky)}
+.sky{position:absolute;inset:0 0 auto 0;height:min(980px,120vh);z-index:-1;overflow:hidden;background:radial-gradient(110% 55% at 50% 100%,rgba(244,170,92,.42),rgba(201,110,72,.16) 28%,transparent 58%),linear-gradient(180deg,#040912 0%,#0a182c 46%,#1a2c49 74%,#3b3346 100%)}
+.sky::before{content:"";position:absolute;inset:0 0 45% 0;opacity:.7;background:radial-gradient(1.2px 1.2px at 12% 18%,#fff,transparent),radial-gradient(1px 1px at 27% 40%,#fff9,transparent),radial-gradient(1.3px 1.3px at 44% 12%,#fffc,transparent),radial-gradient(1px 1px at 61% 30%,#fff8,transparent),radial-gradient(1.2px 1.2px at 78% 16%,#fffb,transparent),radial-gradient(1px 1px at 89% 38%,#fff8,transparent),radial-gradient(1px 1px at 7% 52%,#fff6,transparent)}
+.sky .ridge{position:absolute;left:0;right:0;bottom:22%;height:14%;background:linear-gradient(180deg,#121a29,#0a0f19);clip-path:polygon(0 70%,8% 52%,15% 60%,24% 34%,33% 50%,41% 28%,52% 46%,61% 22%,70% 44%,79% 30%,88% 50%,100% 36%,100% 100%,0 100%)}
+.sky .ground{position:absolute;left:0;right:0;bottom:0;height:22.5%;background:linear-gradient(180deg,#0a0f19,var(--bg))}
+.sky .grid{position:absolute;left:-60%;right:-60%;bottom:0;height:24%;transform:perspective(420px) rotateX(64deg);transform-origin:50% 100%;background:repeating-linear-gradient(90deg,rgba(143,214,255,.14) 0 1px,transparent 1px 90px),repeating-linear-gradient(0deg,rgba(143,214,255,.11) 0 1px,transparent 1px 64px);-webkit-mask-image:linear-gradient(transparent,#000 50%,transparent);mask-image:linear-gradient(transparent,#000 50%,transparent);animation:run 2.6s linear infinite}
+@keyframes run{to{background-position:0 0,0 64px}}
+.wrap{width:min(1160px,100%);margin:0 auto;padding:0 24px}
+nav{display:flex;align-items:center;gap:12px;padding:20px 0}
+nav img{width:36px;height:36px;border-radius:9px}
+nav b{font:700 18px/1 var(--fd);letter-spacing:.16em}
+.chip{white-space:nowrap;font:800 10px/1 var(--fd);letter-spacing:.16em;padding:5px 8px;border-radius:999px;background:var(--sky);color:#06131d}
+nav .sp{flex:1}
+nav a.l{white-space:nowrap;color:var(--dim);text-decoration:none;font:600 13px/1 var(--fd);letter-spacing:.14em;text-transform:uppercase;padding:10px 12px;border-radius:9px}
+nav a.l:hover{color:var(--fg);background:rgba(255,255,255,.06)}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:48px;align-items:center;padding:48px 0 70px}
+.kick{font:600 12px/1 var(--fd);letter-spacing:.28em;color:var(--gold);text-transform:uppercase;margin:0 0 16px}
+h1{margin:0 0 16px;font:700 clamp(38px,5.4vw,62px)/1.02 var(--fd);letter-spacing:.01em}
+h1 span{color:var(--gold2)}
+.lead{color:#c3d1de;font-size:18px;margin:0 0 30px;max-width:34em}
+.cta{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.go{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:14px;padding:19px 30px 19px 24px;border-radius:14px;background:linear-gradient(180deg,#f6dca2,#d5a95c);color:#1a1205;font:800 17px/1 var(--fd);letter-spacing:.12em;text-transform:uppercase;box-shadow:0 18px 40px -14px rgba(226,189,116,.75),inset 0 1px 0 rgba(255,255,255,.55);transition:transform .15s,box-shadow .15s}
+.go:hover{transform:translateY(-2px);box-shadow:0 22px 46px -14px rgba(226,189,116,.9),inset 0 1px 0 rgba(255,255,255,.55)}
+.go:focus-visible,.b2:focus-visible{outline:3px solid var(--sky);outline-offset:4px}
+.go svg{width:22px;height:22px}.go.wait{opacity:.7;cursor:progress}
+.go small{display:block;font:600 11px/1 var(--fd);letter-spacing:.18em;opacity:.65;margin-top:6px}
+.meta{color:var(--dim);font-size:14px;display:flex;flex-wrap:wrap;gap:6px 16px}
+.meta span::before{content:"✓";color:var(--ok);margin-right:6px}
+#msg{display:none;margin-top:6px;padding:14px 16px;border-radius:12px;background:rgba(143,214,255,.08);border:1px solid rgba(143,214,255,.28);color:#d6e6f2;font-size:14.5px;max-width:34em}
+#msg.on{display:block}#msg b{color:#fff}#msg ol{margin:6px 0 0;padding-left:20px}#msg li{margin:3px 0}
+#msg.ok{background:rgba(159,227,180,.08);border-color:rgba(159,227,180,.35)}
+.alt{font-size:14px;color:var(--dim)}.alt a{color:var(--dim)}.alt a:hover{color:var(--fg)}
+.shots{position:relative;padding-bottom:40px}
+.lap{position:relative;border-radius:14px;padding:10px 10px 0;background:linear-gradient(180deg,#2a3242,#141a25);box-shadow:0 50px 100px -40px #000,0 0 0 1px rgba(255,255,255,.08)}
+.lap img{display:block;width:100%;height:auto;border-radius:6px 6px 0 0}
+.lap::after{content:"";position:absolute;left:-6%;right:-6%;bottom:-14px;height:14px;border-radius:0 0 14px 14px;background:linear-gradient(180deg,#3a4354,#1a202b)}
+.ph{position:absolute;right:-10px;bottom:-6px;width:27%;border-radius:22px;padding:6px;background:#10151e;box-shadow:0 30px 60px -20px #000,0 0 0 1px rgba(255,255,255,.12)}
+.ph img{display:block;width:100%;height:auto;border-radius:17px}
+section{padding:70px 0}
+h2{margin:0 0 10px;font:700 clamp(26px,3.4vw,38px)/1.1 var(--fd);letter-spacing:.02em}
+.sub{color:var(--dim);margin:0 0 34px;max-width:44em}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;counter-reset:s}
+.step{padding:24px;border-radius:18px;background:var(--panel);border:1px solid var(--line);position:relative}
+.step::before{counter-increment:s;content:"0" counter(s);font:700 13px/1 var(--fd);letter-spacing:.2em;color:var(--gold)}
+.step b{display:block;margin:12px 0 6px;font:700 20px/1.2 var(--fd);letter-spacing:.04em}
+.step span{color:var(--dim);font-size:15px}
+.feat{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.f{padding:22px;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+.f svg{width:26px;height:26px;color:var(--sky)}
+.f b{display:block;margin:12px 0 4px;font:600 17px/1.25 var(--fd);letter-spacing:.04em}
+.f span{color:var(--dim);font-size:15px}
+.trust{display:grid;grid-template-columns:auto minmax(0,1fr);gap:22px;align-items:center;padding:28px;border-radius:20px;background:linear-gradient(135deg,rgba(226,189,116,.1),rgba(143,214,255,.06));border:1px solid rgba(226,189,116,.3)}
+.trust svg{width:52px;height:52px;color:var(--gold)}
+.trust b{font:700 20px/1.25 var(--fd);letter-spacing:.03em;display:block;margin-bottom:4px}
+.trust p{margin:0;color:#c3d1de}
+.ways{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.way{padding:22px;border-radius:16px;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.way b{font:600 17px/1.25 var(--fd);letter-spacing:.04em}
+.way p{margin:0;color:var(--dim);font-size:15px;flex:1}
+.b2{all:unset;box-sizing:border-box;cursor:pointer;align-self:flex-start;display:inline-flex;align-items:center;gap:9px;padding:11px 16px;border-radius:11px;border:1px solid var(--sky);color:var(--sky);font:600 14px/1 var(--fd);letter-spacing:.06em;background:rgba(143,214,255,.07);text-decoration:none;margin-top:6px}
+.b2:hover{background:rgba(143,214,255,.15)}.b2 svg{width:16px;height:16px}
+details{border-bottom:1px solid var(--line);padding:4px 0}
+summary{cursor:pointer;list-style:none;padding:16px 0;font:600 17px/1.3 var(--fd);letter-spacing:.03em;display:flex;justify-content:space-between;gap:16px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--gold);font-size:22px;line-height:1}details[open] summary::after{content:"–"}
+details p{margin:0 0 16px;color:#c3d1de;max-width:52em}
+footer{padding:40px 0 60px;color:var(--faint);font-size:13.5px;border-top:1px solid var(--line)}
+@media (max-width:900px){.hero{grid-template-columns:1fr;gap:40px;padding-top:24px}.steps,.feat,.ways{grid-template-columns:1fr}.shots{max-width:620px}}
+@media (max-width:560px){.wrap{padding:0 16px}nav a.l.hide{display:none}nav a.l{font-size:11.5px;padding:8px 6px}.go{width:100%;justify-content:center}.trust{grid-template-columns:1fr}section{padding:50px 0}.ph{width:30%;right:-4px}}
+@media (prefers-reduced-motion:reduce){.sky .grid{animation:none}html{scroll-behavior:auto}}
+</style></head><body>
+<div class="sky" aria-hidden="true"><div class="ridge"></div><div class="ground"></div><div class="grid"></div></div>
+<div class="wrap">
+<nav><img src="../icons/icon-192.png" alt=""><b>FPLN</b><span class="chip">BETA 1</span><span class="sp"></span><a class="l hide" href="#features">Features</a><a class="l hide" href="#faq">FAQ</a><a class="l" href="../">Open in browser</a></nav>
+
+<div class="hero">
+  <div>
+    <p class="kick">Flight Plan · for USMA cadets</p>
+    <h1>Your day, <span>cleared for takeoff.</span></h1>
+    <p class="lead">Minute calls, a wake-up alarm you can trust, your tasks and Canvas, OPORDs and a post map with real hours. One app, set up in two minutes.</p>
+    <div class="cta">
+      <button type="button" class="go" id="go"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span id="goT">Install FPLN</span><small id="goS">Free · one click</small></span></button>
+      <div class="meta"><span>Updates itself</span><span>Works offline</span><span>Your data stays on your device</span></div>
+      <div id="msg" role="status" aria-live="polite"></div>
+      <p class="alt" id="alt"></p>
+    </div>
   </div>
-  <ol>
-    <li>Open the download, click <b>Extract all</b>, then double-click <b>Open FPLN.cmd</b>.</li>
-    <li>When FPLN opens, click <b>Install</b> on the banner at the bottom (or the ⋯ menu › Apps › Install this site as an app).</li>
-    <li>Right-click the FPLN icon on the taskbar › <b>Pin to taskbar</b>. Done. You can delete the download.</li>
-  </ol>
-  <p class="note">Updates install themselves the next time FPLN opens. You never download it again.</p>
+  <div class="shots"><div class="lap"><img src="shot-desktop.png" alt="FPLN Home on a laptop: next formation, tasks, uniform, weather, minute calls, alarm and the post map" width="1440" height="900"></div><div class="ph"><img src="shot-phone.png" alt="FPLN on a phone" width="585" height="1266" loading="lazy"></div></div>
 </div>
-<div class="card"><h2 style="margin:0 0 6px;font-size:19px">Phone</h2>
-  <p style="margin:0">Open <b>braveheart30.github.io/FPLN-</b> in Safari or Chrome, then <b>Share › Add to Home Screen</b> (iPhone) or <b>⋮ › Install app</b> (Android).</p></div>
-<p class="note">Everything you put in FPLN stays on your own device. Keep CUI out of it (no FRAGORDs, rosters or other cadets' personal information). A cadet project, not an official USMA or U.S. Army product. Map data © OpenStreetMap contributors.</p>
-</main></body></html>
+</div>
+
+<section><div class="wrap">
+  <h2>From install to first formation</h2><p class="sub">No accounts, no sign-up. FPLN walks you through everything the first time it opens.</p>
+  <div class="steps">
+    <div class="step"><b>Install</b><span>One click above. FPLN gets its own window, a taskbar and Start-menu icon, and it works offline.</span></div>
+    <div class="step"><b>Pre-flight setup</b><span>Pick your class and company, switch on minute calls and your alarm, test the sound and choose a theme.</span></div>
+    <div class="step"><b>Fly</b><span>Load your BUFF card or syllabi so FPLN fills in your week. Updates arrive by themselves; you never download it again.</span></div>
+  </div>
+</div></section>
+
+<section id="features"><div class="wrap">
+  <h2>Everything a cadet runs on</h2><p class="sub">Built by a cadet, for the Corps.</p>
+  <div class="feat">
+    <div class="f"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3.2 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><b>Minute calls</b><span>10, 5, 4, 3, 2 before each formation, with your own times and days.</span></div>
+    <div class="f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 1.5h-15z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 20.5a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><b>Wake-up alarm</b><span>Rings with sound and a notification, even with the screen off, plus a phone backup.</span></div>
+    <div class="f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Tasks &amp; Canvas</b><span>Assignments and deadlines in one list. Import your Canvas list in seconds.</span></div>
+    <div class="f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h9l3 3v13H8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 8v12h12" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 11h6M11 15h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><b>Uniform &amp; OPORDs</b><span>Uniform of the day with the gear board, and a weekly order you can plan and send.</span></div>
+    <div class="f"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="10" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><b>Post map with hours</b><span>Grant Hall, the library, Arvin and the rest, with what's open right now.</span></div>
+    <div class="f"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9h17M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><b>Days ahead</b><span>The academic calendar, Army football, holidays and a quote to start each day.</span></div>
+  </div>
+</div></section>
+
+<section><div class="wrap"><div class="trust">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div><b>Your data stays on your device</b><p>Nothing you enter is uploaded; there's no account and no server holding your plan. Automatic safety checks run on every update. Keep CUI out of FPLN: no FRAGORDs, rosters or other cadets' personal information.</p></div>
+</div></div></section>
+
+<section id="other"><div class="wrap">
+  <h2>Other ways to get FPLN</h2><p class="sub">Every way gets the same app and the same automatic updates.</p>
+  <div class="ways">
+    <div class="way"><b>Windows download</b><p>A small folder with an installer shortcut, plus the keep-awake helper for overnight alarms on a laptop.</p><a class="b2" href="FPLN-beta.zip" download><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Download (.zip, 100 KB)</a></div>
+    <div class="way"><b>iPhone and Android</b><p><b style="font:inherit;color:#fff">iPhone:</b> open this page in Safari, tap Share › Add to Home Screen.<br><b style="font:inherit;color:#fff">Android:</b> tap Install FPLN above, or Chrome's ⋮ › Install app.</p></div>
+    <div class="way"><b>Just the browser</b><p>No install at all. Bookmark it; everything works, and your data stays in that browser.</p><a class="b2" href="../">Open FPLN</a></div>
+  </div>
+</div></section>
+
+<section id="faq"><div class="wrap">
+  <h2>Questions</h2>
+  <details><summary>Do I ever need to download it again?</summary><p>No. FPLN checks for a newer version every time it opens and while it runs. When one is ready you'll see “Update ready · Restart now.”</p></details>
+  <details><summary>Will the alarm work with the screen off?</summary><p>Yes, while FPLN is open. On a laptop, keep it plugged in. The Windows download includes “FPLN keep awake”, which stops Windows from sleeping while plugged in (and an undo file). For extra safety, Wake up › Back up alarms to my phone.</p></details>
+  <details><summary>Where is my data, and who can see it?</summary><p>Only on the device you use, inside the browser that runs FPLN. Nothing goes to a server, and no one else can see it. More › Backup moves it to a new computer.</p></details>
+  <details><summary>The Install button didn't do anything.</summary><p>FPLN may already be installed: look for it in your Start menu or taskbar. Otherwise, in Edge or Chrome open the ⋯ menu › Apps › Install this site as an app. Firefox can't install apps; use Edge or Chrome, or just use FPLN in the browser.</p></details>
+  <details><summary>How do I uninstall it?</summary><p>Open FPLN, click ⋯ at the top right › Uninstall. On a phone, press and hold the icon › Remove.</p></details>
+  <details><summary>Is this an official USMA app?</summary><p>No. FPLN is a cadet project in beta, not an official USMA or U.S. Army product. Send feedback with the speech-bubble button in the app.</p></details>
+</div></section>
+
+<footer><div class="wrap">FPLN · Flight Plan, beta 1. A cadet project, not an official USMA or U.S. Army product. Map data © OpenStreetMap contributors.</div></footer>
+
+<script>
+(function(){
+  var $ = function(i){ return document.getElementById(i); }, go = $("go"), msg = $("msg"), bip = null, installedNow = false;
+  var UA = navigator.userAgent, IOS = /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1), AND = /Android/.test(UA), WIN = /Windows/.test(UA), MAC = /Macintosh/.test(UA) && !IOS;
+  var FF = /Firefox\//.test(UA), CHR = !!window.chrome || /Edg\/|Chrome\/|CriOS/.test(UA), SAF = /Safari\//.test(UA) && !CHR && !FF && !/CriOS|FxiOS|EdgiOS/.test(UA);
+  var standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  var DL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var PLANE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13.5l7-1.5 4.5-7.5 2 .5-2 7.5 5.5.5 1 2-6.5 1-3 5.5-2-.5 1-5.5-6.5-1z" fill="currentColor"/></svg>';
+  function label(t, s, icon){ $("goT").textContent = t; $("goS").textContent = s; if(icon) go.firstElementChild.outerHTML = icon; }
+  function say(html, ok){ msg.innerHTML = html; msg.className = "on" + (ok ? " ok" : ""); }
+  function openApp(){ location.href = "../"; }
+  var manual = WIN || MAC ? 'In <b>Edge</b> or <b>Chrome</b>: open the <b>⋯</b> menu at the top right › <b>Apps</b> › <b>Install this site as an app</b>.' : 'Open the browser menu › <b>Install app</b> or <b>Add to Home screen</b>.';
+  /* the native install prompt: Edge, Chrome and Android */
+  window.addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); bip = e; if(!installedNow) label("Install FPLN", "Free · one click"); });
+  window.addEventListener("appinstalled", function(){ installedNow = true; bip = null; done(); });
+  function done(){ label("Open FPLN", "Installed", PLANE);
+    say('<b>FPLN is installed.</b> It opens in its own window and starts with a two-minute pre-flight setup.' + (WIN ? ' Keep it handy: right-click its taskbar icon › <b>Pin to taskbar</b>.' : ''), true); }
+  if("serviceWorker" in navigator){ try{ navigator.serviceWorker.register("../sw.js", {scope:"../"}).catch(function(){}); }catch(e){} }
+  /* what the big button does on this device */
+  var mode = "install";
+  if(standalone){ mode = "open"; label("Open FPLN", "You're in the app", PLANE); }
+  else if(IOS){ mode = "ios"; label("Add to iPhone", SAF ? "Home Screen · 3 taps" : "Open in Safari first"); }
+  else if(FF){ mode = WIN ? "zip" : "browser"; label(WIN ? "Download for Windows" : "Open FPLN", WIN ? "Opens in Edge to install" : "Firefox can't install apps"); }
+  else if(SAF && MAC){ mode = "macsafari"; label("Add to Dock", "Safari · 2 clicks"); }
+  if(/from=zip/.test(location.search) && mode === "install") say('You opened the Windows launcher. <b>Click Install FPLN</b> to finish.');
+  go.addEventListener("click", function(){
+    if(mode === "open" || installedNow) return openApp();
+    if(mode === "ios") return say(SAF ? '<b>Three taps:</b><ol><li>Tap <b>Share</b> (the square with an arrow) at the bottom of Safari.</li><li>Scroll and tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>. Open FPLN from your Home Screen.</li></ol>' : 'iPhone apps install from <b>Safari</b>. Copy this page’s address, open it in Safari, then tap Share › <b>Add to Home Screen</b>.');
+    if(mode === "macsafari") return say('<b>In Safari:</b> choose <b>File</b> › <b>Add to Dock</b>, then <b>Add</b>. FPLN opens from your Dock.');
+    if(mode === "zip"){ location.href = "FPLN-beta.zip"; return say('Open the download, <b>Extract all</b>, then double-click <b>Install FPLN</b>. It opens this page in Edge, where you click Install.'); }
+    if(mode === "browser") return openApp();
+    if(bip){ var e = bip; go.classList.add("wait");
+      try{ e.prompt(); (e.userChoice || Promise.resolve({})).then(function(r){ go.classList.remove("wait"); if(r && r.outcome === "accepted"){ installedNow = true; bip = null; done(); } else say("No problem. Click <b>Install FPLN</b> whenever you’re ready, or use it in the browser for now."); }); }
+      catch(err){ go.classList.remove("wait"); say(manual); }
+      return; }
+    say('<b>Already installed?</b> Open FPLN from your Start menu or taskbar.<br>Otherwise: ' + manual + ' Or <a href="../">open FPLN in the browser</a>.');
+  });
+  $("alt").innerHTML = mode === "ios" ? 'On a computer? Open this page there to install the desktop app.' : 'Prefer a file? <a href="FPLN-beta.zip" download>Windows download</a> · <a href="../">Use it in the browser</a>';
+})();
+</script>
+</body></html>

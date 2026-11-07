@@ -1,4 +1,4 @@
-# FPLN · Flight Plan (Beta 1, 0.8)
+# FPLN · Flight Plan (Beta 1, 0.8.1)
 
 A planner for USMA cadets: your day, tasks, OPORDs, Eric the assistant and a post map with hours.
 
