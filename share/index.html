@@ -1,0 +1,123 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'none'; form-action 'none'; object-src 'none'; base-uri 'self'">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Share FPLN · Flight Plan (beta)</title>
+<meta name="description" content="Badges, a QR code and a ready-to-send link for FPLN, the Flight Plan app for USMA cadets.">
+<meta property="og:type" content="website"><meta property="og:title" content="FPLN · Your day, cleared for takeoff."><meta property="og:description" content="Install the FPLN beta in one click.">
+<meta property="og:url" content="https://braveheart30.github.io/FPLN-/download/"><meta property="og:image" content="https://braveheart30.github.io/FPLN-/share/og.png">
+<meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#060b14"><link rel="icon" href="../favicon.ico">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap">
+<style>
+:root{--bg:#060b14;--panel:rgba(14,24,42,.72);--line:rgba(255,255,255,.1);--fg:#eef4fa;--dim:#9fb2c6;--gold:#e2bd74;--gold2:#f6dca2;--sky:#8fd6ff;--ok:#9fe3b4;--fd:"Chakra Petch","Segoe UI",system-ui,sans-serif;--fb:"Barlow","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:radial-gradient(110% 50% at 50% 0%,#14243f,var(--bg) 70%);background-color:var(--bg);color:var(--fg);font:400 16px/1.55 var(--fb);min-height:100vh}
+.wrap{width:min(1080px,100%);margin:0 auto;padding:0 24px 70px}
+nav{display:flex;align-items:center;gap:12px;padding:20px 0 10px}nav img{width:34px;height:34px;border-radius:9px}nav b{font:700 17px/1 var(--fd);letter-spacing:.16em}
+nav .sp{flex:1}nav a{color:var(--dim);text-decoration:none;font:600 13px/1 var(--fd);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}nav a:hover{color:var(--fg)}
+.kick{font:600 12px/1 var(--fd);letter-spacing:.28em;color:var(--gold);text-transform:uppercase;margin:34px 0 12px}
+h1{margin:0 0 10px;font:700 clamp(32px,4.6vw,50px)/1.05 var(--fd)}
+.lead{color:#c3d1de;margin:0 0 30px;max-width:40em;font-size:17px}
+/* the link chip */
+.chip{position:relative;display:flex;align-items:center;gap:14px;padding:10px 10px 10px 12px;border-radius:999px;max-width:680px;
+  background:linear-gradient(#0d1729,#0d1729) padding-box,conic-gradient(from var(--a,0deg),#e2bd74,#8fd6ff,#f4aa5c,#e2bd74) border-box;border:2px solid transparent;
+  box-shadow:0 20px 50px -20px rgba(226,189,116,.55);animation:spin 6s linear infinite}
+@property --a{syntax:"<angle>";inherits:false;initial-value:0deg}
+@keyframes spin{to{--a:360deg}}
+.chip img{width:44px;height:44px;border-radius:50%;flex:none;box-shadow:0 0 0 2px rgba(226,189,116,.5)}
+.chip a{flex:1;min-width:0;color:var(--fg);text-decoration:none;font:600 clamp(15px,2.4vw,20px)/1.2 var(--fd);letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip a span{color:var(--dim)}.chip a b{color:var(--gold2);font-weight:700}
+.chip button{flex:none}
+.btn{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:999px;font:700 13.5px/1 var(--fd);letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.pri{background:linear-gradient(180deg,#f6dca2,#d5a95c);color:#1a1205;box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.pri:hover{filter:brightness(1.06)}
+.gh{border:1px solid rgba(143,214,255,.55);color:var(--sky);border-radius:11px;padding:11px 14px;font-size:12.5px}
+.gh:hover{background:rgba(143,214,255,.1)}
+.btn:focus-visible,.chip a:focus-visible{outline:3px solid var(--sky);outline-offset:3px}
+.btn svg{width:16px;height:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+h2{font:700 22px/1.2 var(--fd);letter-spacing:.03em;margin:0 0 6px}
+.sub{color:var(--dim);margin:0 0 18px;font-size:15px}
+section{margin-top:56px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.card{padding:22px;border-radius:18px;background:var(--panel);border:1px solid var(--line)}
+.card .pv{display:grid;place-items:center;min-height:140px;border-radius:12px;background:repeating-conic-gradient(rgba(255,255,255,.03) 0 25%,transparent 0 50%) 0 0/18px 18px}
+.card .pv.light{background:#eef2f6}
+.card .pv a{display:inline-block;transition:transform .15s}.card .pv a:hover{transform:translateY(-2px) scale(1.02)}
+.card .pv img{display:block;width:300px;max-width:100%;height:auto}
+.og img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.og .meta{padding:12px 4px 0;font-size:14px;color:var(--dim)}.og .meta b{display:block;color:var(--fg);font-weight:600}
+.qr{display:grid;grid-template-columns:240px minmax(0,1fr);gap:24px;align-items:center}
+.qr img{width:100%;height:auto;display:block;cursor:zoom-in}
+.msg{white-space:pre-wrap;font:500 15px/1.55 var(--fb);background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:12px;padding:16px;color:#dbe6f0;margin:0}
+code{display:block;font:12.5px/1.5 ui-monospace,monospace;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:10px;padding:12px;color:#c3d1de;overflow-x:auto;white-space:pre}
+#toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;transition:.25s;padding:12px 18px;border-radius:12px;background:#0d1729;border:1px solid rgba(159,227,180,.5);color:var(--ok);font:600 14px/1 var(--fd);letter-spacing:.06em;pointer-events:none;z-index:9}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#big{position:fixed;inset:0;background:rgba(3,6,12,.92);display:none;place-items:center;z-index:8;cursor:zoom-out;padding:20px}
+#big.on{display:grid}#big img{max-height:92vh;max-width:92vw;height:auto}
+@media (max-width:760px){.grid{grid-template-columns:1fr}.qr{grid-template-columns:1fr}.qr img{max-width:280px}.wrap{padding:0 16px 60px}.chip{flex-wrap:wrap;border-radius:22px}.chip a{flex-basis:calc(100% - 60px)}.chip button{width:100%}}
+@media (prefers-reduced-motion:reduce){.chip{animation:none}}
+</style></head><body><div class="wrap">
+<nav><img src="../icons/icon-192.png" alt=""><b>FPLN</b><span class="sp"></span><a href="../download/">Install page</a></nav>
+
+<p class="kick">Share kit</p>
+<h1>Send FPLN to your classmates</h1>
+<p class="lead">One link, a badge for emails and docs, and a QR code for formation. Everything opens the one-click install page.</p>
+
+<div class="chip"><img src="../icons/icon-192.png" alt=""><a id="lnk" href="../get/"><span>braveheart30.github.io/</span><b>FPLN-/get</b></a><button type="button" class="btn pri" data-copy="link"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M16 5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>Copy link</button></div>
+<div class="row"><button type="button" class="btn gh" id="shr" hidden>Share…</button><button type="button" class="btn gh" data-copy="msg">Copy a ready-made message</button></div>
+
+<section><h2>Badges</h2><p class="sub">“Copy for email” copies the badge as a clickable picture: paste it into Gmail, Outlook, Teams or a Google Doc.</p>
+<div class="grid">
+  <div class="card"><div class="pv"><a href="../get/"><img src="badge.png" alt="Install FPLN · Flight Plan, beta 1" width="600" height="176"></a></div>
+    <div class="row"><button type="button" class="btn gh" data-copy="badge" data-img="badge.png">Copy for email</button><a class="btn gh" href="badge.png" download="FPLN-badge.png">Download PNG</a><button type="button" class="btn gh" data-copy="html" data-img="badge.png">Copy HTML</button></div></div>
+  <div class="card"><div class="pv light"><a href="../get/"><img src="badge-gold.png" alt="Install FPLN · Flight Plan, beta 1" width="602" height="176"></a></div>
+    <div class="row"><button type="button" class="btn gh" data-copy="badge" data-img="badge-gold.png">Copy for email</button><a class="btn gh" href="badge-gold.png" download="FPLN-badge-gold.png">Download PNG</a><button type="button" class="btn gh" data-copy="html" data-img="badge-gold.png">Copy HTML</button></div></div>
+</div></section>
+
+<section><h2>QR code</h2><p class="sub">For a slide, a whiteboard or your phone screen at formation. Tap it to show it full screen.</p>
+<div class="card qr"><img src="qr.png" alt="QR code that opens the FPLN install page" id="qrImg" width="920" height="1178">
+  <div><p style="margin:0 0 6px;color:#c3d1de">Point a phone camera at it. It opens <b style="color:#fff;font-weight:600">braveheart30.github.io/FPLN-/download</b>, which shows the right install steps for that phone.</p>
+  <div class="row"><a class="btn gh" href="qr.png" download="FPLN-QR.png">Download QR</a><button type="button" class="btn gh" id="qrBig">Show full screen</button></div></div></div></section>
+
+<section class="og"><h2>Link preview</h2><p class="sub">What people see when you paste the link into iMessage, GroupMe, Teams, Discord or Slack.</p>
+<div class="card"><img src="og.png" alt="Link preview: FPLN, Your day, cleared for takeoff. Install in one click." width="1200" height="630"><div class="meta"><b>FPLN · Your day, cleared for takeoff.</b>Minute calls, a wake-up alarm, tasks and Canvas, OPORDs and a post map with real hours. Install the beta in one click.</div></div></section>
+
+<section><h2>Ready-made message</h2>
+<pre class="msg" id="msgT">I'm testing FPLN (Flight Plan), a planner built for cadets: minute calls, a wake-up alarm, tasks and Canvas, and a post map with hours.
+
+Install it in one click: https://braveheart30.github.io/FPLN-/get
+
+It updates by itself and your data stays on your own device. Keep CUI out of it. Use the Feedback button in the app for anything weird.</pre></section>
+</div>
+<div id="big"><img src="qr.png" alt="QR code that opens the FPLN install page"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+  var URL_ = "https://braveheart30.github.io/FPLN-/get", BASE = "https://braveheart30.github.io/FPLN-/share/";
+  var t = document.getElementById("toast"), tt = 0;
+  function toast(s){ t.textContent = s; t.classList.add("on"); clearTimeout(tt); tt = setTimeout(function(){ t.classList.remove("on"); }, 1800); }
+  function badgeHTML(img){ return '<a href="'+URL_+'"><img src="'+BASE+img+'" alt="Install FPLN · Flight Plan (beta)" width="300" height="88" style="border:0;width:300px;height:auto"></a>'; }
+  function plain(s, done){ if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(s).then(function(){ toast(done); }, function(){ fallback(s, done); }); } else fallback(s, done); }
+  function fallback(s, done){ var ta = document.createElement("textarea"); ta.value = s; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); toast(done); }catch(e){ toast("Press Ctrl+C to copy"); } ta.remove(); }
+  function rich(img){ var h = badgeHTML(img);
+    try{ if(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
+      navigator.clipboard.write([new ClipboardItem({"text/html": new Blob([h], {type:"text/html"}), "text/plain": new Blob([URL_], {type:"text/plain"})})]).then(function(){ toast("Badge copied. Paste it into your email"); }, function(){ richFallback(h); });
+      return; } }catch(e){}
+    richFallback(h); }
+  function richFallback(h){ var d = document.createElement("div"); d.contentEditable = "true"; d.innerHTML = h; d.style.position = "fixed"; d.style.opacity = "0"; document.body.appendChild(d);
+    var r = document.createRange(); r.selectNodeContents(d); var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    try{ document.execCommand("copy"); toast("Badge copied. Paste it into your email"); }catch(e){ toast("Couldn’t copy here; use Download PNG"); } s.removeAllRanges(); d.remove(); }
+  document.addEventListener("click", function(e){ var b = e.target.closest("[data-copy]"); if(!b) return; var k = b.dataset.copy;
+    if(k==="link") plain(URL_, "Link copied");
+    else if(k==="msg") plain(document.getElementById("msgT").textContent, "Message copied");
+    else if(k==="badge") rich(b.dataset.img);
+    else if(k==="html") plain(badgeHTML(b.dataset.img), "HTML copied"); });
+  var sh = document.getElementById("shr");
+  if(navigator.share){ sh.hidden = false; sh.onclick = function(){ navigator.share({title:"FPLN · Flight Plan", text:"Install FPLN, the cadet planner, in one click:", url:URL_}).catch(function(){}); }; }
+  var big = document.getElementById("big");
+  function show(){ big.classList.add("on"); } document.getElementById("qrImg").onclick = show; document.getElementById("qrBig").onclick = show;
+  big.onclick = function(){ big.classList.remove("on"); }; addEventListener("keydown", function(e){ if(e.key==="Escape") big.classList.remove("on"); });
+})();
+</script>
+</body></html>

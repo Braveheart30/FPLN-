@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Get FPLN · Flight Plan (beta)</title>
 <link rel="manifest" href="../manifest.webmanifest">
+<meta property="og:type" content="website"><meta property="og:site_name" content="FPLN · Flight Plan"><meta property="og:title" content="FPLN · Your day, cleared for takeoff."><meta property="og:description" content="Minute calls, a wake-up alarm, tasks and Canvas, OPORDs and a post map with real hours. Install the beta in one click."><meta property="og:url" content="https://braveheart30.github.io/FPLN-/download/"><meta property="og:image" content="https://braveheart30.github.io/FPLN-/share/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://braveheart30.github.io/FPLN-/share/og.png">
 <link rel="icon" href="../favicon.ico"><link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
 <meta name="theme-color" content="#060b14"><meta name="description" content="Install FPLN, the Flight Plan app for USMA cadets: minute calls, wake-up alarm, tasks and Canvas, OPORDs and a post map with hours. One click, updates itself. Beta.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap">
@@ -84,7 +85,7 @@ footer{padding:40px 0 60px;color:var(--faint);font-size:13.5px;border-top:1px so
 </style></head><body>
 <div class="sky" aria-hidden="true"><div class="ridge"></div><div class="ground"></div><div class="grid"></div></div>
 <div class="wrap">
-<nav><img src="../icons/icon-192.png" alt=""><b>FPLN</b><span class="chip">BETA 1</span><span class="sp"></span><a class="l hide" href="#features">Features</a><a class="l hide" href="#faq">FAQ</a><a class="l" href="../">Open in browser</a></nav>
+<nav><img src="../icons/icon-192.png" alt=""><b>FPLN</b><span class="chip">BETA 1</span><span class="sp"></span><a class="l hide" href="#features">Features</a><a class="l hide" href="#faq">FAQ</a><a class="l hide" href="../share/">Share</a><a class="l" href="../">Open in browser</a></nav>
 
 <div class="hero">
   <div>
@@ -186,7 +187,7 @@ footer{padding:40px 0 60px;color:var(--faint);font-size:13.5px;border-top:1px so
       return; }
     say('<b>Already installed?</b> Open FPLN from your Start menu or taskbar.<br>Otherwise: ' + manual + ' Or <a href="../">open FPLN in the browser</a>.');
   });
-  $("alt").innerHTML = mode === "ios" ? 'On a computer? Open this page there to install the desktop app.' : 'Prefer a file? <a href="FPLN-beta.zip" download>Windows download</a> · <a href="../">Use it in the browser</a>';
+  $("alt").innerHTML = mode === "ios" ? 'On a computer? Open this page there to install the desktop app.' : 'Prefer a file? <a href="FPLN-beta.zip" download>Windows download</a> · <a href="../">Use it in the browser</a>' + ' · <a href="../share/">Share FPLN</a>';
 })();
 </script>
 </body></html>
