@@ -1,0 +1,90 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; worker-src 'self'; manifest-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>FPLN has moved</title>
+<meta property="og:title" content="FPLN · Own the day."><meta property="og:image" content="https://afpln.github.io/aFPLN/share/og.png">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@600;700&display=swap">
+<style>
+:root{--bg:#060b14;--panel:#0e182a;--line:rgba(255,255,255,.1);--fg:#eef4fa;--dim:#9fb2c6;--gold:#e2bd74;--gold2:#f6dca2;--sky:#8fd6ff;--ok:#9fe3b4;--bad:#ff8a7a;
+  --fd:"Chakra Petch","Segoe UI",system-ui,sans-serif;--fb:"Barlow","Segoe UI",system-ui,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:radial-gradient(110% 50% at 50% 0%,#15274a,var(--bg) 70%) var(--bg);color:var(--fg);font:400 16px/1.55 var(--fb);min-height:100vh;display:grid;place-items:center;padding:24px 16px}
+main{width:min(520px,100%)}
+.wm{font:700 64px/.9 var(--fd);letter-spacing:.04em;margin:0 0 6px;background:linear-gradient(180deg,#fff,#e8eef5 55%,var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.kick{font:600 12px/1.3 var(--fd);letter-spacing:.24em;color:var(--gold);text-transform:uppercase;margin:0 0 22px}
+.card{padding:22px;border-radius:18px;background:var(--panel);border:1px solid var(--line)}
+h1{font:700 24px/1.2 var(--fd);margin:0 0 8px}
+p{margin:0 0 14px;color:#c8d6e3}
+.go{all:unset;box-sizing:border-box;cursor:pointer;display:block;text-align:center;width:100%;padding:16px;border-radius:14px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1a1205;font:700 16px/1 var(--fd);letter-spacing:.12em;text-transform:uppercase;margin-top:6px;text-decoration:none}
+.go:focus-visible,.b2:focus-visible{outline:3px solid var(--sky);outline-offset:3px}
+.b2{all:unset;box-sizing:border-box;cursor:pointer;display:block;text-align:center;width:100%;padding:13px;border-radius:12px;border:1px solid var(--line);color:var(--dim);font:600 14px/1.2 var(--fd);letter-spacing:.06em;margin-top:10px}
+.msg{padding:12px 14px;border-radius:12px;font-size:14.5px;margin:12px 0 0;display:none}
+.msg.on{display:block}.msg.ok{background:rgba(159,227,180,.08);border:1px solid rgba(159,227,180,.35)}.msg.bad{background:rgba(255,138,122,.08);border:1px solid rgba(255,138,122,.35)}
+small{color:var(--dim)}
+.addr{font:600 14px/1.3 var(--fd);color:var(--sky);word-break:break-all}
+[hidden]{display:none!important}
+</style></head><body><main>
+<div class="wm">FPLN</div><p class="kick">FPLN has a new address</p>
+<div class="card" id="move"><h1>Move your plan in one tap</h1>
+  <p>FPLN now lives at its own address, where no other site can reach your data. Your tasks, schedule and settings come with you.</p>
+  <button class="go" type="button" id="go">Move my plan</button>
+  <button class="b2" type="button" id="copy">On iPhone? Copy my plan instead</button>
+  <p style="margin:14px 0 0"><small>AI keys and the Canvas token don't move, for safety. You'll add them again in the new FPLN.</small></p></div>
+<div class="card" id="copied" hidden><h1>Copied</h1>
+  <p>Now open the new FPLN in <b>Safari</b> and paste it on the screen that appears:</p>
+  <p class="addr" id="addr2"></p>
+  <a class="go" id="openNew" href="#" target="_blank">Open the new FPLN</a>
+  <button class="b2" type="button" id="erase">I've moved it. Erase the old copy</button></div>
+<div class="card" id="done" hidden><h1>Moved</h1>
+  <p>Your plan is at the new address, and the old copy on this device is erased.</p>
+  <p id="pwa" hidden>You can remove this old FPLN app, then install FPLN again from the new address.</p>
+  <a class="go" id="openDone" href="#">Open FPLN</a></div>
+<p class="msg" id="msg" role="status" aria-live="polite"></p>
+</main>
+<script>
+(function(){
+  "use strict";
+  var NEW = "https://afpln.github.io/aFPLN/", NEW_ORIGIN = NEW.replace(/^(https:\/\/[^\/]+).*$/, "$1");
+  var ALLOW = ["fpln:clock","fpln:clock:undo","fpln.clock.v1","fpln:dash","fpln:avatar","fpln:places","fpln:setup","fpln:display","fpln:music","fpln:rec","fpln:eric:model","fpln:eric:pick","wp-class","wp-long","wp-look","wp-scan","wp-ui","wp-uod","wp-view","wp-wxmode"];
+  var $ = function(id){ return document.getElementById(id); };
+  function show(id){ ["move","copied","done"].forEach(function(x){ $(x).hidden = x !== id; }); }
+  function say(t, bad){ var m = $("msg"); m.textContent = t; m.className = "msg on " + (bad ? "bad" : "ok"); }
+  function ls(){ try{ return window.localStorage; }catch(e){ return null; } }
+  var L = ls();
+  /* a deep link (/FPLN-/share/, /FPLN-/download/ …) keeps its place at the new address */
+  var rest = location.pathname.replace(/^\/FPLN-\/?/, "").replace(/index\.html$/, "");
+  function target(){ return NEW + rest + location.search + (location.hash || ""); }
+  var hasPlan = !!(L && (L.getItem("fpln:clock") || L.getItem("fpln:setup") || L.getItem("fpln.clock.v1")));
+  $("addr2").textContent = NEW.replace(/^https:\/\//, "");
+  $("openNew").href = NEW + "move/"; $("openDone").href = NEW;
+  if(!hasPlan){ wipe(); location.replace(target()); return; }    /* nothing to move: go straight there */
+  function payload(){ var keys = {}; ALLOW.forEach(function(k){ var v = L.getItem(k); if(v != null) keys[k] = v; }); return {fplnMove:1, v:1, from:location.origin + "/FPLN-/", at:Date.now(), keys:keys}; }
+  /* erase everything FPLN kept at the old address: storage, offline copies, on-device AI downloads, the old worker */
+  function wipe(){
+    try{ if(L){ var ks = []; for(var i = 0; i < L.length; i++){ var k = L.key(i); if(/^(fpln|wp-)/.test(k)) ks.push(k); } ks.forEach(function(k){ L.removeItem(k); }); } }catch(e){}
+    try{ sessionStorage.clear(); }catch(e){}
+    try{ if(window.caches) caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }); }catch(e){}
+    try{ if(window.indexedDB && indexedDB.databases) indexedDB.databases().then(function(d){ (d || []).forEach(function(x){ if(x.name) indexedDB.deleteDatabase(x.name); }); }); }catch(e){}
+    try{ if(navigator.serviceWorker) navigator.serviceWorker.getRegistrations().then(function(r){ r.forEach(function(x){ x.unregister(); }); }); }catch(e){} }
+  function finished(){ wipe(); show("done"); var sa = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; $("pwa").hidden = !sa; $("msg").className = "msg"; }
+  var win = null, sent = false;
+  window.addEventListener("message", function(e){
+    if(e.origin !== NEW_ORIGIN || !win || e.source !== win) return;
+    var d = e.data || {};
+    if(d.t === "fpln-move-ready" && !sent){ sent = true; win.postMessage({t:"fpln-move-data", payload:payload()}, NEW_ORIGIN); say("Check the new FPLN window and tap Bring it over."); }
+    else if(d.t === "fpln-move-done"){ finished(); } });
+  $("go").onclick = function(){ sent = false; win = window.open(NEW + "move/#from-old", "fpln-new");
+    if(!win){ say("Your browser blocked the new window. Use Copy my plan instead.", true); return; }
+    say("Opening the new FPLN…");
+    setTimeout(function(){ if(!sent) say("Nothing yet? Use Copy my plan instead, then paste it in the new FPLN.", true); }, 7000); };
+  $("copy").onclick = function(){ var t = JSON.stringify(payload());
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ show("copied"); $("msg").className = "msg"; },
+      function(){ say("Copying was blocked. Use Move my plan instead.", true); }); };
+  $("erase").onclick = finished;
+  if("serviceWorker" in navigator){ try{ navigator.serviceWorker.register("sw.js", {scope:"./"}).catch(function(){}); }catch(e){} }
+})();
+</script>
+</body></html>
